@@ -20,4 +20,17 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "bundler", "~> 1.7"
   spec.add_development_dependency "rake", "~> 10.0"
+
+  spec.add_dependency 'asciidoctor'
+  spec.add_dependency 'asciidoctor-diagram'
+  spec.add_dependency 'git'
+  spec.add_dependency 'guard'
+  spec.add_dependency 'guard-shell'
+  spec.add_dependency 'guard-livereload'
+  spec.add_dependency 'haml'
+  spec.add_dependency 'json'
+  spec.add_dependency 'pandoc-ruby'
+  spec.add_dependency 'rake'
+  spec.add_dependency 'yajl-ruby'
+  spec.add_dependency 'tilt'
 end
