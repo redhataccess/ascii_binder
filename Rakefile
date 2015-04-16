@@ -1,3 +1,4 @@
+require "bundler/gem_tasks"
 require "#{File.join(Dir.pwd,'_builder_lib/docsitebuilder/helpers')}"
 require 'rake'
 
