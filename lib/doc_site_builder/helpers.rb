@@ -9,8 +9,6 @@ require 'pathname'
 require 'yaml'
 require 'forwardable'
 
-require_relative "./template_renderer"
-
 module DocSiteBuilder
   module Helpers
     extend Forwardable

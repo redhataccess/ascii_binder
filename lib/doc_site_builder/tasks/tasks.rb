@@ -1,5 +1,5 @@
-require "#{File.join(Dir.pwd,'_builder_lib/docsitebuilder/helpers')}"
 require 'rake'
+require 'doc_site_builder'
 
 include DocSiteBuilder::Helpers
 

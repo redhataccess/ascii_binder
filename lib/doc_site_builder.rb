@@ -1,5 +1,3 @@
 require "doc_site_builder/version"
-
-module DocSiteBuilder
-  # Your code goes here...
-end
+require "doc_site_builder/template_renderer"
+require "doc_site_builder/helpers"
