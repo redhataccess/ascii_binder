@@ -14,7 +14,7 @@ module DocSiteBuilder
     extend Forwardable
 
     def self.source_dir
-      @source_dir ||= File.expand_path '../../../', __FILE__
+      @source_dir ||= `git rev-parse --show-toplevel`.chomp
     end
 
     def self.template_dir
