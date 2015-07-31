@@ -6,6 +6,7 @@ require 'git'
 require 'logger'
 require 'pandoc-ruby'
 require 'pathname'
+require 'sitemap_generator'
 require 'yaml'
 require 'forwardable'
 
