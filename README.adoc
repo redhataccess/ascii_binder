@@ -1,4 +1,4 @@
-= DocSiteBuilder
+= AsciiBinder
 
 This repo contains the documentation for
 

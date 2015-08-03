@@ -10,7 +10,7 @@ require 'sitemap_generator'
 require 'yaml'
 require 'forwardable'
 
-module DocSiteBuilder
+module AsciiBinder
   module Helpers
     extend Forwardable
 

@@ -1,7 +1,7 @@
 require 'rake'
-require 'doc_site_builder'
+require 'ascii_binder'
 
-include DocSiteBuilder::Helpers
+include AsciiBinder::Helpers
 
 desc "Build the documentation"
 task :build, :build_distro do |task,args|

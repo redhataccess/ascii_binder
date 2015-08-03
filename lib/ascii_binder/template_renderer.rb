@@ -1,6 +1,6 @@
 require 'tilt'
 
-module DocSiteBuilder
+module AsciiBinder
   class TemplateRenderer
     def self.template_cache
       @template_cache ||= {}

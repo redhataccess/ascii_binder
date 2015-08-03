@@ -1,16 +1,16 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'doc_site_builder/version'
+require 'ascii_binder/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "doc_site_builder"
-  spec.version       = DocSiteBuilder::VERSION
+  spec.name          = "ascii_binder"
+  spec.version       = AsciiBinder::VERSION
   spec.authors       = ["N. Harrison Ripps"]
   spec.email         = ["nhr@redhat.com"]
   spec.summary       = %q{Builder for multi product documention websites.}
   spec.description   = %q{Builder for multi product documention websites.}
-  spec.homepage      = "http://github.com/doc_site_builder/doc_site_builder"
+  spec.homepage      = "http://github.com/redhataccess/ascii_binder"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")
