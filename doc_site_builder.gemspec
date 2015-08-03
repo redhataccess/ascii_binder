@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = DocSiteBuilder::VERSION
   spec.authors       = ["N. Harrison Ripps"]
   spec.email         = ["nhr@redhat.com"]
-  spec.summary       = %q{Builder for multi product documention websites.}
-  spec.description   = %q{Builder for multi product documention websites.}
+  spec.summary       = %q{Builder for multi product documention websites.  This gem has been renamed to ascii_binder and will no longer be supported. Please switch to ascii_binder as soon as possible.}
+  spec.description   = %q{Builder for multi product documention websites.  This gem has been renamed to ascii_binder and will no longer be supported. Please switch to ascii_binder as soon as possible.}
   spec.homepage      = "http://github.com/doc_site_builder/doc_site_builder"
   spec.license       = "MIT"
 
@@ -33,4 +33,10 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'sitemap_generator', '~> 5.1.0'
   spec.add_dependency 'yajl-ruby'
   spec.add_dependency 'tilt'
+
+  spec.post_install_message = <<-MESSAGE
+!    The 'doc_site_builder' gem has been deprecated and has been replaced by 'ascii_binder'.
+!    See: https://rubygems.org/gems/ascii_binder
+!    And: https://github.com/redhataccess/ascii_binder
+MESSAGE
 end
