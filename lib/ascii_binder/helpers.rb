@@ -1,3 +1,4 @@
+require 'ascii_binder/template_renderer'
 require 'asciidoctor'
 require 'asciidoctor/cli'
 require 'asciidoctor-diagram'
@@ -16,6 +17,10 @@ module AsciiBinder
 
     def self.source_dir
       @source_dir ||= `git rev-parse --show-toplevel`.chomp
+    end
+
+    def self.set_source_dir(source_dir)
+      @source_dir = source_dir
     end
 
     def self.template_dir
@@ -42,9 +47,7 @@ module AsciiBinder
       end
     end
 
-    def_delegators self, :source_dir, :template_dir, :preview_dir, :package_dir
-
-    TemplateRenderer.initialize_cache(template_dir)
+    def_delegators self, :source_dir, :set_source_dir, :template_dir, :preview_dir, :package_dir
 
     BUILD_FILENAME      = '_build_cfg.yml'
     DISTRO_MAP_FILENAME = '_distro_map.yml'
@@ -70,17 +73,17 @@ module AsciiBinder
 
     def git_stash_all
       # See if there are any changes in need of stashing
-      @stash_needed = `git status --porcelain` !~ /^\s*$/
+      @stash_needed = `cd #{source_dir} && git status --porcelain` !~ /^\s*$/
       if @stash_needed
         puts "\nNOTICE: Stashing uncommited changes and files in working branch."
-        `git stash -u`
+        `cd #{source_dir} && git stash -u`
       end
     end
 
     def git_apply_and_drop
       return unless @stash_needed
       puts "\nNOTE: Re-applying uncommitted changes and files to working branch."
-      if system("git stash pop")
+      if system("cd #{source_dir} && git stash pop")
         puts "NOTE: Stash application successful."
       else
         puts "ERROR: Could not apply stashed code. Run `git stash apply` manually."
@@ -184,7 +187,7 @@ module AsciiBinder
         args[:subtopic_shim]             = '../'
       end
 
-      TemplateRenderer.new.render("_templates/page.html.erb", args)
+      TemplateRenderer.new.render(File.expand_path("#{source_dir}/_templates/page.html.erb"), args)
     end
 
     def extract_breadcrumbs(args)
@@ -405,6 +408,9 @@ module AsciiBinder
         puts "Building all distributions."
       end
 
+      # Cache the page templates
+      TemplateRenderer.initialize_cache(template_dir)
+
       # First, notify the user of missing local branches
       missing_branches = []
       distro_branches(build_distro).sort.each do |dbranch|
@@ -431,6 +437,9 @@ module AsciiBinder
             next
           end
         end
+
+        # Note the image files checked in to this branch.
+        branch_image_files = Find.find(source_dir).select{ |path| not path.nil? and (path =~ /.*\.png$/ or path =~ /.*\.png\.cache$/) }
 
         first_branch = single_page.nil?
 
@@ -477,13 +486,13 @@ module AsciiBinder
           system("mkdir -p #{branch_path}/images")
 
           # Copy stylesheets into preview area
-          system("cp -r _stylesheets/*css #{branch_path}/stylesheets")
+          system("cp -r #{source_dir}/_stylesheets/*css #{branch_path}/stylesheets")
 
           # Copy javascripts into preview area
-          system("cp -r _javascripts/*js #{branch_path}/javascripts")
+          system("cp -r #{source_dir}/_javascripts/*js #{branch_path}/javascripts")
 
           # Copy images into preview area
-          system("cp -r _images/* #{branch_path}/images")
+          system("cp -r #{source_dir}/_images/* #{branch_path}/images")
 
           # Build the landing page
           navigation = nav_tree(distro,branch_build_config)
@@ -573,6 +582,15 @@ module AsciiBinder
           return
         end
 
+        # Remove DITAA-generated images
+        ditaa_image_files = Find.find(source_dir).select{ |path| not path.nil? and not (path =~ /_preview/ or path =~ /_package/) and (path =~ /.*\.png$/ or path =~ /.*\.png\.cache$/) and not branch_image_files.include?(path) }
+        if not ditaa_image_files.empty?
+          puts "\nRemoving ditaa-generated files from repo before changing branches."
+          ditaa_image_files.each do |dfile|
+            File.unlink(dfile)
+          end
+        end
+
         if local_branch == working_branch
           # We're moving away from the working branch, so save off changed files
           git_stash_all
@@ -652,6 +670,7 @@ module AsciiBinder
       :images_path      => "../../#{dir_depth}#{branch_config["dir"]}/images/",
       :site_home_path   => "../../#{dir_depth}index.html",
       :css              => ['docs.css'],
+      :template_dir     => template_dir,
     }
     full_file_text = page(page_args)
     File.write(tgt_file_path,full_file_text)
@@ -704,6 +723,12 @@ module AsciiBinder
             end
           end
         end
+      end
+    end
+
+    def clean_up
+      if not system("rm -rf #{source_dir}/_preview/* #{source_dir}/_package/*")
+        puts "Nothing to clean."
       end
     end
   end
