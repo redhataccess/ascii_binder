@@ -1,0 +1,11 @@
+---
+ascii_binder:
+  name: AsciiBinder Doc Project
+  author: AsciiBinder Team <team@asciibinder.org>
+  site: main
+  site_name: Home
+  site_url: http://asciibinder.org/
+  branches:
+    master:
+      name: Latest
+      dir: latest

@@ -1,0 +1,9 @@
+## AsciiBinder-specific ignores
+_preview
+_package
+*.swp
+diag-*.png
+diag-*.png.cache
+
+## Project-specific ignores
+

@@ -4,7 +4,7 @@ guard 'shell' do
       full_path      = m[0].split('/')
       src_group_path = full_path.length == 1 ? '' : full_path[0..-2].join('/')
       filename       = full_path[-1][0..-6]
-      system("bundle exec rake refresh_page['#{src_group_path}:#{filename}']")
+      system("asciibinder build --page='#{src_group_path}:#{filename}'")
     end
   }
 end

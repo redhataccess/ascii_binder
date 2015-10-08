@@ -4,10 +4,20 @@ require 'ascii_binder/helpers'
 require 'pathname'
 require 'trollop'
 
-
 include AsciiBinder::Helpers
 
-SUB_COMMANDS = %w{help build watch package clean}
+def call_generate(distro,page=nil)
+  if page == ''
+    page = nil
+  end
+  begin
+    generate_docs(distro,page)
+  rescue Exception => e
+    Trollop::die "Could not generate docs: #{e.message}"
+  end
+end
+
+SUB_COMMANDS = %w{help build watch package clean create}
 Trollop::options do
   banner <<-EOF
 Usage:
@@ -16,6 +26,8 @@ Usage:
 Commands:
   build (default action)
     Builds the HTML docs in the indicated repo dir
+  create
+    Generates a new AsciiBinder repo at the indicated dir
   watch
     Starts Guard, which automatically regenerates changed HTML
     files on the working branch in the repo dir
@@ -24,7 +36,7 @@ Commands:
     defined in the _distro_config.yml file
   clean
     Remove _preview, _publish and _package dirs created by
-    other asciibinder operations.
+    other AsciiBinder operations.
 
 Options:
 EOF
@@ -38,7 +50,7 @@ if cmd.nil?
   cmd = "build"
 elsif not SUB_COMMANDS.include?(cmd)
   if not ARGV.empty?
-    Trollop::die "'#{cmd}' is not a valid asciibinder command. Legal values are '#{SUB_COMMANDS.join('\', \'')}'."
+    Trollop::die "'#{cmd}' is not a valid asciibinder subcommand. Legal values are '#{SUB_COMMANDS.join('\', \'')}'."
   else
     repo_dir = Pathname.new(cmd)
     cmd = "build"
@@ -54,22 +66,44 @@ Usage:
 
 Description:
   This is the default behavior for the asciibinder utility. When run,
-  asciibinder reads the _distro_config.yml file out of the working
+  AsciiBinder reads the _distro_config.yml file out of the working
   branch of the indicated repo directory and based on that, proceeds to
   build the working branch version of the documentation for each distro.
 
-  Once the working branch version is built, asciibinder cycles through
+  Once the working branch version is built, AsciiBinder cycles through
   the other branches named in the _distro_config.yml file until all of
   the permutations have been built.
+
+  The available options enable you to limit the scope of the build work,
+  as described by the options themselves. Note that the format for the
+  "--page" option is:
+
+  <topic_group>:<topic_file>
+
+  or for subtopics:
+
+  <topic_group>/<subtopic_group>:<topic_file>
+
+  However, if you want to use the --page option extensively, then be
+  aware of the `asciibinder watch` function, which does this for you
+  automatically as you change .adoc files in your working branch.
 
 Options:
 EOF
       opt :distro, "Instead of building all distros, build branches only for the specified distro.", :default => ''
+      opt :page, "Build only the specified page for all distros and only the current working branch.", :default => ''
+      conflicts :distro, :page
     end
-  #when "new"
-  #  Trollop::options do
-  #    opt :initialize, "Create a new AsciiBinder-ready git repo in the target directory.", :default => true
-  #  end
+  when "create"
+    Trollop::options do
+      banner <<-EOF
+Usage:
+  #$0 create <new_repo_dir>
+
+Description:
+  Creates a new, bare AsciiBinder repo in the specified directory.
+EOF
+    end
   when "watch"
     Trollop::options do
       banner <<-EOF
@@ -77,16 +111,23 @@ Usage:
   #$0 watch <repo_dir>
 
 Description:
-  In watch mode, asciibinder starts a Guard process in the foreground.
+  In watch mode, AsciiBinder starts a Guard process in the foreground.
   This process watches the repo_dir for changes to the AsciiDoc (.adoc)
-  files. When a change occurs, asciibinder regenerates the specific
+  files. When a change occurs, AsciiBinder regenerates the specific
   HTML output of the file that was changed, for the working branch only.
+
+  This is the equivalent of running:
+
+  $ asciibinder build --page='<topic_group>:<affected_file>'
+
+  ...except that the Guardfile automatically detects and runs this as
+  you work.
 
   This is meant to be used in conjunction with a web browser that is
   running a LiveReload plugin. If you are viewing the output HTML page
   in a browser where LiveReload is active, then every time you save a
   new version of the .adoc file, the new HTML is automatically
-  regenrated and your page view is automatically refreshed.
+  regenerated and your page view is automatically refreshed.
 EOF
     end
   when "package"
@@ -116,40 +157,70 @@ elsif repo_dir.nil?
   if ARGV.length == 1
     repo_dir = Pathname.new(ARGV.shift)
   else
-    repo_dir = Pathname.pwd
+    if not cmd == 'create'
+      repo_dir = Pathname.pwd
+    else
+      Trollop::die "Specify a name for the new repo directory."
+    end
   end
 end
 
 # Validate the repo_dir path
-if not repo_dir.exist?
-  Trollop::die "The specified repo directory '#{repo_dir}' does not exist."
-elsif not repo_dir.directory?
-  Trollop::die "The specified repo directory path '#{repo_dir}' is not a directory."
-elsif not repo_dir.readable?
-  Trollop::die "The specified repo directory '#{repo_dir}' is not readable."
-elsif not repo_dir.writable?
-  Trollop::die "The specified repo directory '#{repo_dir}' cannot be written to."
+if cmd == 'create'
+  if repo_dir.exist?
+    Trollop::die "The specified new repo directory '#{repo_dir}' already exists."
+  end
+else
+  if not repo_dir.exist?
+    Trollop::die "The specified repo directory '#{repo_dir}' does not exist."
+  elsif not repo_dir.directory?
+    Trollop::die "The specified repo directory path '#{repo_dir}' is not a directory."
+  elsif not repo_dir.readable?
+    Trollop::die "The specified repo directory '#{repo_dir}' is not readable."
+  elsif not repo_dir.writable?
+    Trollop::die "The specified repo directory '#{repo_dir}' cannot be written to."
+  else
+    ['.git','_build_cfg.yml','_distro_map.yml','_templates'].each do |file|
+      if not File.exist?(File.join(repo_dir, file))
+        Trollop::die "The specified repo directory '#{repo_dir}' does not appear to be an AsciiBinder repo."
+      end
+    end
+  end
 end
 
 # Set the repo root
 set_source_dir(File.expand_path(repo_dir))
 
+# Change to the repo dir. This is necessary in order for
+# AsciiDoctor to work properly.
+if not cmd == 'create'
+  Dir.chdir source_dir
+end
+
 # Do the things with the stuff
 case cmd
 when "build"
   build_distro = cmd_opts[:build] || ''
-  generate_docs(build_distro)
+  refresh_page = cmd_opts[:page] || ''
+  call_generate(build_distro,refresh_page)
 when "package"
   clean_up
-  generate_docs('')
+  call_generate('')
   package_site = cmd_opts[:site] || ''
   package_docs(package_site)
 when "watch"
-  guardfile_path = File.join(Gem::Specification.find_by_name("ascii_binder").full_gem_path, 'Guardfile')
-  exec("guard -G #{guardfile_path}")
+  if not dir_empty?(preview_dir)
+    guardfile_path = File.join(Gem::Specification.find_by_name("ascii_binder").full_gem_path, 'Guardfile')
+    exec("guard -G #{guardfile_path}")
+  else
+    Trollop::die "Run 'asciibinder build' at least once before running 'asciibinder watch'."
+  end
 when "clean"
   clean_up
   puts "Cleaned up #{repo_dir}."
+when "create"
+  create_new_repo
+  puts "Created new repo in #{repo_dir}."
 end
 
 exit
