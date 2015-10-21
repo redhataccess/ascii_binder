@@ -2,6 +2,7 @@ require 'ascii_binder/template_renderer'
 require 'asciidoctor'
 require 'asciidoctor/cli'
 require 'asciidoctor-diagram'
+require 'fileutils'
 require 'find'
 require 'git'
 require 'logger'
@@ -19,8 +20,16 @@ module AsciiBinder
       @source_dir ||= `git rev-parse --show-toplevel`.chomp
     end
 
+    def self.gem_root_dir
+      @gem_root_dir ||= File.expand_path("../../../", __FILE__)
+    end
+
     def self.set_source_dir(source_dir)
       @source_dir = source_dir
+    end
+
+    def template_renderer
+      @template_renderer ||= TemplateRenderer.new(source_dir, template_dir)
     end
 
     def self.template_dir
@@ -47,13 +56,28 @@ module AsciiBinder
       end
     end
 
-    def_delegators self, :source_dir, :set_source_dir, :template_dir, :preview_dir, :package_dir
+    def self.stylesheet_dir
+      @stylesheet_dir ||= File.join(source_dir,STYLESHEET_DIRNAME)
+    end
+
+    def self.javascript_dir
+      @javascript_dir ||= File.join(source_dir,JAVASCRIPT_DIRNAME)
+    end
+
+    def self.image_dir
+      @image_dir ||= File.join(source_dir,IMAGE_DIRNAME)
+    end
+
+    def_delegators self, :source_dir, :set_source_dir, :template_dir, :preview_dir, :package_dir, :gem_root_dir, :stylesheet_dir, :javascript_dir, :image_dir
 
     BUILD_FILENAME      = '_build_cfg.yml'
     DISTRO_MAP_FILENAME = '_distro_map.yml'
     BUILDER_DIRNAME     = '_build_system'
     PREVIEW_DIRNAME     = '_preview'
     PACKAGE_DIRNAME     = '_package'
+    STYLESHEET_DIRNAME  = '_stylesheets'
+    JAVASCRIPT_DIRNAME  = '_javascripts'
+    IMAGE_DIRNAME       = '_images'
     BLANK_STRING_RE     = Regexp.new('^\s*$')
 
     def build_date
@@ -95,8 +119,10 @@ module AsciiBinder
     def local_branches
       @local_branches ||= begin
         branches = []
-        branches << git.branches.local.select{ |b| b.current }[0].name
-        branches << git.branches.local.select{ |b| not b.current }.map{ |b| b.name }
+        if not git.branches.local.empty?
+          branches << git.branches.local.select{ |b| b.current }[0].name
+          branches << git.branches.local.select{ |b| not b.current }.map{ |b| b.name }
+        end
         branches.flatten
       end
     end
@@ -113,13 +139,54 @@ module AsciiBinder
       @distro_map_file ||= File.join(source_dir, DISTRO_MAP_FILENAME)
     end
 
+    def dir_empty?(dir)
+      Dir.entries(dir).select{ |f| not f.start_with?('.') }.empty?
+    end
+
     # Protip: Don't cache this! It needs to be reread every time we change branches.
     def build_config
       validate_config(YAML.load_stream(open(build_config_file)))
     end
 
+    def create_new_repo
+      gem_template_dir = File.join(gem_root_dir,"templates")
+
+      # Create the new repo dir
+      begin
+        Dir.mkdir(source_dir)
+      rescue Exception => e
+        raise "Could not create directory '#{source_dir}': #{e.message}"
+      end
+
+      # Copy the basic repo content into the new repo dir
+      Find.find(gem_template_dir).each do |path|
+        next if path == gem_template_dir
+        src_path = Pathname.new(path)
+        tgt_path = src_path.sub(gem_template_dir,source_dir)
+        if src_path.directory?
+          FileUtils.mkdir_p(tgt_path.to_s)
+        else
+          FileUtils.cp src_path.to_s, tgt_path.to_s
+        end
+      end
+
+      # Initialize the git repo and check everything in
+      g = nil
+      begin
+        g = Git.init(source_dir)
+      rescue Exception => e
+        raise "Could not initialize git repo in '#{source_dir}': #{e.message}"
+      end
+    end
+
     def find_topic_files
-      file_list = Find.find('.').select{ |path| not path.nil? and path =~ /.*\.adoc$/ and not path =~ /README/ and not path =~ /\/old\// and not path.split('/').length < 3 }
+      file_list = []
+      Find.find(source_dir).each do |path|
+        next if path.nil? or not path =~ /.*\.adoc/ or path =~ /README/ or path =~ /\/old\//
+        src_path = Pathname.new(path).sub(source_dir,'').to_s
+        next if src_path.split('/').length < 3
+        file_list << src_path
+      end
       file_list.map{ |path|
         parts = path.split('/').slice(1..-1);
         parts.slice(0..-2).join('/') + '/' + parts[-1].split('.')[0]
@@ -187,7 +254,8 @@ module AsciiBinder
         args[:subtopic_shim]             = '../'
       end
 
-      TemplateRenderer.new.render(File.expand_path("#{source_dir}/_templates/page.html.erb"), args)
+      template_path = File.expand_path("#{source_dir}/_templates/page.html.erb")
+      template_renderer.render(template_path, args)
     end
 
     def extract_breadcrumbs(args)
@@ -390,6 +458,12 @@ module AsciiBinder
     end
 
     def generate_docs(build_distro,single_page=nil)
+      # First, test to see if the docs repo has any commits. If the user has just
+      # run `asciibinder create`, there will be no commits to work from, yet.
+      if local_branches.empty?
+        raise "Before you can build the docs, you need at least one commit in your docs repo."
+      end
+
       single_page_dir  = []
       single_page_file = nil
       if not single_page.nil?
@@ -407,9 +481,6 @@ module AsciiBinder
       elsif single_page.nil?
         puts "Building all distributions."
       end
-
-      # Cache the page templates
-      TemplateRenderer.initialize_cache(template_dir)
 
       # First, notify the user of missing local branches
       missing_branches = []
@@ -480,19 +551,23 @@ module AsciiBinder
           end
 
           # Create the target dir
-          branch_path = File.join(preview_dir,distro,branch_config["dir"])
-          system("mkdir -p #{branch_path}/stylesheets")
-          system("mkdir -p #{branch_path}/javascripts")
-          system("mkdir -p #{branch_path}/images")
+          branch_path           = File.join(preview_dir,distro,branch_config["dir"])
+          branch_stylesheet_dir = File.join(branch_path,STYLESHEET_DIRNAME)
+          branch_javascript_dir = File.join(branch_path,JAVASCRIPT_DIRNAME)
+          branch_image_dir      = File.join(branch_path,IMAGE_DIRNAME)
 
-          # Copy stylesheets into preview area
-          system("cp -r #{source_dir}/_stylesheets/*css #{branch_path}/stylesheets")
-
-          # Copy javascripts into preview area
-          system("cp -r #{source_dir}/_javascripts/*js #{branch_path}/javascripts")
-
-          # Copy images into preview area
-          system("cp -r #{source_dir}/_images/* #{branch_path}/images")
+          # Copy files into the preview area.
+          [[stylesheet_dir, '*css', branch_stylesheet_dir],
+           [javascript_dir, '*js',  branch_javascript_dir],
+           [image_dir,      '*',    branch_image_dir]].each do |dgroup|
+            src_dir = dgroup[0]
+            glob    = dgroup[1]
+            tgt_dir = dgroup[2]
+            if Dir.exist?(src_dir) and not dir_empty?(src_dir)
+              FileUtils.mkdir_p tgt_dir
+              FileUtils.cp_r Dir.glob(File.join(src_dir,glob)), tgt_dir
+            end
+          end
 
           # Build the landing page
           navigation = nav_tree(distro,branch_build_config)
@@ -665,12 +740,11 @@ module AsciiBinder
       :group_id         => topic_group['ID'],
       :subgroup_id      => topic_subgroup && topic_subgroup['ID'],
       :topic_id         => topic['ID'],
-      :css_path         => "../../#{dir_depth}#{branch_config["dir"]}/stylesheets/",
-      :javascripts_path => "../../#{dir_depth}#{branch_config["dir"]}/javascripts/",
-      :images_path      => "../../#{dir_depth}#{branch_config["dir"]}/images/",
+      :css_path         => "../../#{dir_depth}#{branch_config["dir"]}/#{STYLESHEET_DIRNAME}/",
+      :javascripts_path => "../../#{dir_depth}#{branch_config["dir"]}/#{JAVASCRIPT_DIRNAME}/",
+      :images_path      => "../../#{dir_depth}#{branch_config["dir"]}/#{IMAGE_DIRNAME}/",
       :site_home_path   => "../../#{dir_depth}index.html",
-      :css              => ['docs.css'],
-      :template_dir     => template_dir,
+      :template_path    => template_dir,
     }
     full_file_text = page(page_args)
     File.write(tgt_file_path,full_file_text)

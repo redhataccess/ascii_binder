@@ -6,11 +6,11 @@ require 'ascii_binder/version'
 Gem::Specification.new do |spec|
   spec.name          = "ascii_binder"
   spec.version       = AsciiBinder::VERSION
-  spec.authors       = ["N. Harrison Ripps"]
-  spec.email         = ["nhr@redhat.com"]
+  spec.authors       = ["N. Harrison Ripps","Jason Frey"]
+  spec.email         = ["nhr@redhat.com","jfrey@redhat.com"]
   spec.summary       = %q{Builder for multi product documention websites.}
   spec.description   = %q{Builder for multi product documention websites.}
-  spec.homepage      = "http://github.com/redhataccess/ascii_binder"
+  spec.homepage      = "http://asciibinder.org/"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")
