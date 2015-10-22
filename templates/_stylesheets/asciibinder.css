@@ -79,6 +79,11 @@ License: https://creativecommons.org/licenses/by/2.0/
   font-size: 28px;
 }
 
+.navbar-brand {
+  padding: initial;
+  height: initial;
+}
+
 .nav > li  > a.hover{
   background-color: none;
 }
