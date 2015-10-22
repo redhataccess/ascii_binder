@@ -7,7 +7,7 @@
 Welcome to the AsciiBinder Docs Management System. This welcome page is provided as a template for the topic pages that you will create for your software project.
 
 == Need Help?
-* Check out the http://www.asciibinder.org/latest/welcome/[AsiiBinder documentation]
+* Check out the http://www.asciibinder.org/latest/welcome/[AsciiBinder documentation]
 * Join our http://groups.google.com/group/asciibinder[mailing list]
 * Find us on IRC at FreeNode, http://webchat.freenode.net/?randomnick=1&channels=asciibinder&uio=d4[#asciibinder] channel
 * Open an https://github.com/redhataccess/ascii_binder/issues[issue on GitHub]
