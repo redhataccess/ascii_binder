@@ -2,13 +2,20 @@
 
 image:https://badge.fury.io/rb/ascii_binder.svg["Gem Version", link="https://badge.fury.io/rb/ascii_binder"]
 
-This repo contains the source code for AsciiBinder, a documentation system for complex software projects. To learn more about AsciiBinder:
+AsciiBinder is an AsciiDoc-based system for authoring and publishing closely related documentation sets from a single source.
 
-* Have a gander at the http://www.asciibinder.org/latest/welcome/[AsciiBinder documentation]
-* Or just take the https://rubygems.org/gems/ascii_binder[ascii_binder Ruby Gem] for a spin
+== Learn More
+
+* See the http://www.asciibinder.org[homepage].
+* Have a gander at the http://www.asciibinder.org/latest/welcome/[AsciiBinder documentation].
+* Or just take the https://rubygems.org/gems/ascii_binder[ascii_binder Ruby Gem] for a spin.
 
 The AsciiBinder system was initially developed for https://github.com/openshift/openshift-docs[OpenShift documentation], but has been revised to work for documenting a wide variety of complex, multi-versioned software projects.
 
 == Contributing
-We are using the https://github.com/redhataccess/ascii_binder/issues[Issues] page to track bugs and feature ideas on the code, so have a look and feel free to ask questions there. You can also follow / chat with us on Twitter - https://twitter.com/AsciiBinder[@AsciiBinder]
 
+We are using the https://github.com/redhataccess/ascii_binder/issues[Issues] page to track bugs and feature ideas on the code, so have a look and feel free to ask questions there. You can also chat with us on IRC at FreeNode, http://webchat.freenode.net/?randomnick=1&channels=asciibinder&uio=d4[#asciibinder] channel, or on Twitter - https://twitter.com/AsciiBinder[@AsciiBinder].
+
+== License
+
+The gem is available as open source under the terms of the http://opensource.org/licenses/MIT[MIT License].
