@@ -1,0 +1,2 @@
+= AsciiBinder-Based Docs Repo
+This docs repository was created with http://asciibinder.org/[AsciiBinder]. For more information on how AsciiBinder works, check out the http://asciibinder.org/latest/[documentation].
