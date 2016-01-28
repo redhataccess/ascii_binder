@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'ascii_binder/helpers'
+require 'ascii_binder/version'
 require 'pathname'
 require 'trollop'
 
@@ -25,8 +26,9 @@ def repo_check(repo_dir)
   end
 end
 
-SUB_COMMANDS = %w{help build watch package clean create clone}
+SUB_COMMANDS = %w{help version build watch package clean create clone}
 Trollop::options do
+  version AsciiBinder::VERSION
   banner <<-EOF
 Usage:
   #$0 <command> <repo_dir>
@@ -176,6 +178,9 @@ EOF
     end
   when "help"
     Trollop::educate
+  when "version"
+    puts AsciiBinder::VERSION
+    exit 0
   end
 
 if (not repo_dir.nil? and not ARGV.empty?) or (repo_dir.nil? and ARGV.length > 1)
