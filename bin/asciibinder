@@ -17,7 +17,15 @@ def call_generate(distro,page=nil)
   end
 end
 
-SUB_COMMANDS = %w{help build watch package clean create}
+def repo_check(repo_dir)
+  ['.git','_build_cfg.yml','_distro_map.yml','_templates'].each do |file|
+    unless File.exist?(File.join(repo_dir, file))
+      Trollop::die "The specified repo directory '#{repo_dir}' does not appear to be an AsciiBinder repo."
+    end
+  end
+end
+
+SUB_COMMANDS = %w{help build watch package clean create clone}
 Trollop::options do
   banner <<-EOF
 Usage:
@@ -28,6 +36,8 @@ Commands:
     Builds the HTML docs in the indicated repo dir
   create
     Generates a new AsciiBinder repo at the indicated dir
+  clone
+    Clones an existing AsciiBinder repo to the local filesystem
   watch
     Starts Guard, which automatically regenerates changed HTML
     files on the working branch in the repo dir
@@ -48,12 +58,12 @@ repo_dir = nil
 
 if cmd.nil?
   cmd = "build"
-elsif not SUB_COMMANDS.include?(cmd)
-  if not ARGV.empty?
-    Trollop::die "'#{cmd}' is not a valid asciibinder subcommand. Legal values are '#{SUB_COMMANDS.join('\', \'')}'."
-  else
+elsif !SUB_COMMANDS.include?(cmd)
+  if ARGV.empty?
     repo_dir = Pathname.new(cmd)
     cmd = "build"
+  else
+    Trollop::die "'#{cmd}' is not a valid asciibinder subcommand. Legal values are '#{SUB_COMMANDS.join('\', \'')}'."
   end
 end
 
@@ -103,6 +113,23 @@ Usage:
 Description:
   Creates a new, bare AsciiBinder repo in the specified directory.
 EOF
+    end
+  when "clone"
+    Trollop::options do
+      banner <<-EOF
+Usage:
+  #$0 clone <options> <git_repo_url>
+
+Description:
+  Clones an existing AsciiBinder repo to the current directory.
+  Under the default behavior, AsciiBinder will attempt to set up
+  tracking branches based on the contents of _distro_map.yml,
+  but this can be suppressed (see Options).
+
+Options:
+EOF
+      opt :branches, "Create tracking branches after cloning.", :default => true
+      opt :dir, "Specify the pathname of the local directory for cloning.", :default => ''
     end
   when "watch"
     Trollop::options do
@@ -155,10 +182,23 @@ if (not repo_dir.nil? and not ARGV.empty?) or (repo_dir.nil? and ARGV.length > 1
   Trollop::die "Too many arguments provided to ascii_binder: '#{ARGV.join(' ')}'. Exiting."
 elsif repo_dir.nil?
   if ARGV.length == 1
-    repo_dir = Pathname.new(ARGV.shift)
+    if cmd == 'clone'
+      cmd_opts[:giturl] = ARGV.shift
+      if cmd_opts[:dir] != ''
+        repo_dir = Pathname.new(cmd_opts[:dir])
+      else
+        repo_dir = File.join(Pathname.pwd, cmd_opts[:giturl].split('/')[-1].split('.')[0])
+      end
+    else
+      repo_dir = Pathname.new(ARGV.shift)
+    end
   else
-    if not cmd == 'create'
-      repo_dir = Pathname.pwd
+    if cmd != 'create'
+      if cmd == 'clone'
+        Trollop::die "Provide a git URL to clone from."
+      else
+        repo_dir = Pathname.pwd
+      end
     else
       Trollop::die "Specify a name for the new repo directory."
     end
@@ -166,34 +206,56 @@ elsif repo_dir.nil?
 end
 
 # Validate the repo_dir path
-if cmd == 'create'
+if cmd == 'create' or cmd == 'clone'
   if repo_dir.exist?
     Trollop::die "The specified new repo directory '#{repo_dir}' already exists."
   end
 else
-  if not repo_dir.exist?
+  if !repo_dir.exist?
     Trollop::die "The specified repo directory '#{repo_dir}' does not exist."
-  elsif not repo_dir.directory?
+  elsif !repo_dir.directory?
     Trollop::die "The specified repo directory path '#{repo_dir}' is not a directory."
-  elsif not repo_dir.readable?
+  elsif !repo_dir.readable?
     Trollop::die "The specified repo directory '#{repo_dir}' is not readable."
-  elsif not repo_dir.writable?
+  elsif !repo_dir.writable?
     Trollop::die "The specified repo directory '#{repo_dir}' cannot be written to."
   else
-    ['.git','_build_cfg.yml','_distro_map.yml','_templates'].each do |file|
-      if not File.exist?(File.join(repo_dir, file))
-        Trollop::die "The specified repo directory '#{repo_dir}' does not appear to be an AsciiBinder repo."
-      end
-    end
+    repo_check(repo_dir)
   end
 end
 
 # Set the repo root
 set_source_dir(File.expand_path(repo_dir))
 
+# Cloning? Time to try it.
+if cmd == 'clone'
+  puts "Cloning #{cmd_opts[:giturl]} to #{repo_dir}"
+  system("git clone #{cmd_opts[:giturl]} #{repo_dir}")
+  Trollop::die "The git URL could not be cloned: #{err}" if $?.exitstatus != 0
+
+  # Make sure this cloned repo is legit.
+  repo_check(repo_dir)
+
+  if cmd_opts[:branches]
+    Dir.chdir(repo_dir)
+    puts "Tracking branch setup:"
+    distro_branches.each do |doc_branch|
+      next if doc_branch == 'master'
+      puts "- #{doc_branch}"
+      system("git branch #{doc_branch} origin/#{doc_branch}")
+    end
+  else
+    puts "- Skipping tracking branch setup"
+  end
+
+  # Done and done.
+  puts "Cloning complete."
+  exit
+end
+
 # Change to the repo dir. This is necessary in order for
 # AsciiDoctor to work properly.
-if not cmd == 'create'
+if cmd != 'create'
   Dir.chdir source_dir
 end
 
@@ -209,7 +271,7 @@ when "package"
   package_site = cmd_opts[:site] || ''
   package_docs(package_site)
 when "watch"
-  if not dir_empty?(preview_dir)
+  if !dir_empty?(preview_dir)
     guardfile_path = File.join(Gem::Specification.find_by_name("ascii_binder").full_gem_path, 'Guardfile')
     exec("guard -G #{guardfile_path}")
   else
