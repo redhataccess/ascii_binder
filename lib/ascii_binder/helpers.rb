@@ -79,6 +79,7 @@ module AsciiBinder
     JAVASCRIPT_DIRNAME  = '_javascripts'
     IMAGE_DIRNAME       = '_images'
     BLANK_STRING_RE     = Regexp.new('^\s*$')
+    IFDEF_STRING_RE     = Regexp.new('ifdef::(.+?)\[\]')
 
     def build_date
       Time.now.utc
@@ -296,10 +297,33 @@ module AsciiBinder
     end
 
     def parse_distros distros_string, for_validation=false
-      values = distros_string.split(',').map{ |v| v.strip }
-      return values if for_validation
-      return distro_map.keys if values.include?('all')
-      return values.uniq
+      values   = distros_string.split(',').map{ |v| v.strip }
+      expanded = expand_distro_globs(values)
+      return expanded if for_validation
+      return distro_map.keys if expanded.include?('all')
+      return expanded.uniq
+    end
+
+    def expand_distro_globs(values)
+      complete = []
+      values.each do |k|
+        if k == '*'
+          return distro_map.keys
+        elsif k.include?('*')
+          key_parts = k.split('*')
+          if key_parts.length > 2
+            raise "The Distro key value '#{k}' contains too many wildcards; only one is supported."
+          end
+          distro_map.keys.each do |dkey|
+            if (key_parts[0].nil? or dkey.start_with?(key_parts[0])) and (key_parts[1].nil? or dkey.end_with?(key_parts[1]))
+              complete << dkey
+            end
+          end
+        else
+          complete << k
+        end
+      end
+      return complete.uniq
     end
 
     def validate_distros distros_string
@@ -718,8 +742,16 @@ module AsciiBinder
       article_title  = file_lines[0].gsub(/^\=\s+/, '').gsub(/\s+$/, '').gsub(/\{product-title\}/, distro_config["name"]).gsub(/\{product-version\}/, branch_config["name"])
     end
 
-    topic_html     = Asciidoctor.render topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
-    dir_depth = ''
+    # Scan the file for ifdefs and perform any distro key glob expansions
+    file_lines.each do |line|
+      # This non-greedy match will only capture the first ifdef::<key_list>[] consturction on a given line,
+      # but AsciiDoc only supports one per line.
+      line.sub!(IFDEF_STRING_RE) { |m| "ifdef::#{expand_distro_globs($1.split(',')).join(',')}[]" }
+    end
+    topic_adoc = file_lines.join("\n")
+
+    topic_html = Asciidoctor.render topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
+    dir_depth  = ''
     if branch_config['dir'].split('/').length > 1
       dir_depth = '../' * (branch_config['dir'].split('/').length - 1)
     end
