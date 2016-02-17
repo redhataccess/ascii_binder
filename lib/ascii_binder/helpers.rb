@@ -297,7 +297,7 @@ module AsciiBinder
     end
 
     def parse_distros distros_string, for_validation=false
-      values   = distros_string.split(',').map{ |v| v.strip }
+      values   = distros_string.split(',').map(&:strip)
       expanded = expand_distro_globs(values)
       return expanded if for_validation
       return distro_map.keys if expanded.include?('all')
@@ -305,25 +305,10 @@ module AsciiBinder
     end
 
     def expand_distro_globs(values)
-      complete = []
-      values.each do |k|
-        if k == '*'
-          return distro_map.keys
-        elsif k.include?('*')
-          key_parts = k.split('*')
-          if key_parts.length > 2
-            raise "The Distro key value '#{k}' contains too many wildcards; only one is supported."
-          end
-          distro_map.keys.each do |dkey|
-            if (key_parts[0].nil? or dkey.start_with?(key_parts[0])) and (key_parts[1].nil? or dkey.end_with?(key_parts[1]))
-              complete << dkey
-            end
-          end
-        else
-          complete << k
-        end
-      end
-      return complete.uniq
+      values.flat_map do |value|
+        value_regex = Regexp.new("\\A#{value.gsub("*", ".*")}\\z")
+        distro_map.keys.select { |k| value_regex.match(k) }
+      end.uniq
     end
 
     def validate_distros distros_string
@@ -744,7 +729,7 @@ module AsciiBinder
 
     # Scan the file for ifdefs and perform any distro key glob expansions
     file_lines.each do |line|
-      # This non-greedy match will only capture the first ifdef::<key_list>[] consturction on a given line,
+      # This non-greedy match will only capture the first ifdef::<key_list>[] construction on a given line,
       # but AsciiDoc only supports one per line.
       line.sub!(IFDEF_STRING_RE) { |m| "ifdef::#{expand_distro_globs($1.split(',')).join(',')}[]" }
     end
