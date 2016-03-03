@@ -298,9 +298,11 @@ module AsciiBinder
 
     def parse_distros distros_string, for_validation=false
       values   = distros_string.split(',').map(&:strip)
+      # Don't bother with glob expansion if 'all' is in the list.
+      return distro_map.keys if values.include?('all')
+
       expanded = expand_distro_globs(values)
       return expanded if for_validation
-      return distro_map.keys if expanded.include?('all')
       return expanded.uniq
     end
 
