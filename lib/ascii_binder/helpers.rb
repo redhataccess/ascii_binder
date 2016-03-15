@@ -728,13 +728,6 @@ module AsciiBinder
     if file_lines.length > 0
       article_title  = file_lines[0].gsub(/^\=\s+/, '').gsub(/\s+$/, '').gsub(/\{product-title\}/, distro_config["name"]).gsub(/\{product-version\}/, branch_config["name"])
     end
-
-    # Scan the file for ifdefs and perform any distro key glob expansions
-    file_lines.each do |line|
-      # This non-greedy match will only capture the first ifdef::<key_list>[] construction on a given line,
-      # but AsciiDoc only supports one per line.
-      line.sub!(IFDEF_STRING_RE) { |m| "ifdef::#{expand_distro_globs($1.split(',')).join(',')}[]" }
-    end
     topic_adoc = file_lines.join("\n")
 
     topic_html = Asciidoctor.render topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
