@@ -237,9 +237,17 @@ module AsciiBinder
     end
 
     def distro_branches(use_distro='')
-      @distro_branches ||= begin
-        use_distro_list = use_distro == '' ? distro_map.keys : [use_distro]
-        distro_map.select{ |dkey,dval| use_distro_list.include?(dkey) }.map{ |distro,dconfig| dconfig["branches"].keys }.flatten
+      use_distro_list = use_distro == '' ? distro_map.keys : [use_distro]
+      distro_map.select{ |dkey,dval| use_distro_list.include?(dkey) }.map{ |distro,dconfig| dconfig["branches"].keys }.flatten
+    end
+
+    def branch_group_branches
+      @branch_group_branches ||= begin
+        group_branches = Hash.new
+        group_branches[:working_only] = [local_branches[0]]
+        group_branches[:publish] = distro_branches
+        group_branches[:all] = local_branches
+        group_branches
       end
     end
 
@@ -468,7 +476,7 @@ module AsciiBinder
       ].concat(more_attrs)
     end
 
-    def generate_docs(build_distro,single_page=nil)
+    def generate_docs(branch_group,build_distro,single_page)
       # First, test to see if the docs repo has any commits. If the user has just
       # run `asciibinder create`, there will be no commits to work from, yet.
       if local_branches.empty?
@@ -507,8 +515,11 @@ module AsciiBinder
         puts "The build will proceed but these branches will not be generated."
       end
 
-      # Generate all distros for every local branch
-      local_branches.each do |local_branch|
+      # Generate all distros for all branches in the indicated branch group
+      branch_group_branches[branch_group].each do |local_branch|
+        # Skip known missing branches; this will only come up for the :publish branch group
+        next if missing_branches.include?(local_branch)
+
         # Single-page regen only occurs for the working branch
         if not local_branch == working_branch
           if single_page.nil?
@@ -542,9 +553,23 @@ module AsciiBinder
 
         # Run all distros.
         distro_map.each do |distro,distro_config|
-          # Only building a single distro; skip the others.
-          if not build_distro == '' and not build_distro == distro
-            next
+          if not build_distro == ''
+            # Only building a single distro; build for all indicated branches, skip the others.
+            if not build_distro == distro
+              next
+            end
+          else
+            current_distro_branches = distro_branches(distro)
+
+            # In publish mode we only build "valid" distro-branch combos from the distro map
+            if branch_group == :publish and not current_distro_branches.include?(local_branch)
+              next
+            end
+
+            # In "build all" mode we build every distro on the working branch plus the publish distro-branch combos
+            if branch_group == :all and not local_branch == working_branch and not current_distro_branches.include?(local_branch)
+              next
+            end
           end
 
           site_name = distro_config["site_name"]

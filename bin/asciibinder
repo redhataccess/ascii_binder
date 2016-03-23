@@ -7,12 +7,12 @@ require 'trollop'
 
 include AsciiBinder::Helpers
 
-def call_generate(distro,page=nil)
+def call_generate(branch_group, distro, page)
   if page == ''
     page = nil
   end
   begin
-    generate_docs(distro,page)
+    generate_docs(branch_group, distro, page)
   rescue Exception => e
     Trollop::die "Could not generate docs: #{e.message}"
   end
@@ -82,13 +82,20 @@ Description:
   branch of the indicated repo directory and based on that, proceeds to
   build the working branch version of the documentation for each distro.
 
-  Once the working branch version is built, AsciiBinder cycles through
-  the other branches named in the _distro_config.yml file until all of
-  the permutations have been built.
+  If you use the --all_branches flag, AsciiBinder behaves as described
+  above, and then once the working branch version is built, AsciiBinder
+  cycles through the other branches named in the _distro_config.yml file
+  until all of the permutations have been built.
 
-  The available options enable you to limit the scope of the build work,
-  as described by the options themselves. Note that the format for the
-  "--page" option is:
+  If you want to limit the scope of the build work for faster builds,
+  you have two targeted options:
+
+  --distro=<distro_key> - Only builds the specified distro and branches
+  associated with this distro.
+
+  --page=<page_path> - Only builds the specified page for all distros.
+
+  Note that the format for the "--page" option is:
 
   <topic_group>:<topic_file>
 
@@ -98,10 +105,11 @@ Description:
 
   However, if you want to use the --page option extensively, then be
   aware of the `asciibinder watch` function, which does this for you
-  automatically as you change .adoc files in your working branch.
+  automatically as you change any .adoc files in your working branch.
 
 Options:
 EOF
+      opt :all_branches, "Instead of building only the current working branch, build all branches", :default => false
       opt :distro, "Instead of building all distros, build branches only for the specified distro.", :default => ''
       opt :page, "Build only the specified page for all distros and only the current working branch.", :default => ''
       conflicts :distro, :page
@@ -267,12 +275,13 @@ end
 # Do the things with the stuff
 case cmd
 when "build"
-  build_distro = cmd_opts[:build] || ''
-  refresh_page = cmd_opts[:page] || ''
-  call_generate(build_distro,refresh_page)
+  branch_group = cmd_opts[:all_branches] ? :all : :working_only
+  build_distro = cmd_opts[:distro] || ''
+  refresh_page = cmd_opts[:page] || nil
+  call_generate(branch_group,build_distro,refresh_page)
 when "package"
   clean_up
-  call_generate('')
+  call_generate(:publish,'',nil)
   package_site = cmd_opts[:site] || ''
   package_docs(package_site)
 when "watch"
