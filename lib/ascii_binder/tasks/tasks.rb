@@ -8,7 +8,7 @@ task :build, :build_distro do |task,args|
   # Figure out which distros we are building.
   # A blank value here == all distros
   build_distro = args[:build_distro] || ''
-  generate_docs(build_distro)
+  generate_docs(:all,build_distro,nil)
 end
 
 desc "Package the documentation"
@@ -21,7 +21,7 @@ end
 
 desc "Build the documentation and refresh the page"
 task :refresh_page, :single_page do |task,args|
-  generate_docs('',args[:single_page])
+  generate_docs(:working_only,'',args[:single_page])
 end
 
 desc "Clean all build artifacts"
