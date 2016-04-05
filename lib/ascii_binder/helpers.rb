@@ -153,11 +153,7 @@ module AsciiBinder
       gem_template_dir = File.join(gem_root_dir,"templates")
 
       # Create the new repo dir
-      begin
-        Dir.mkdir(source_dir)
-      rescue Exception => e
-        raise "Could not create directory '#{source_dir}': #{e.message}"
-      end
+      FileUtils.mkdir_p(source_dir)
 
       # Copy the basic repo content into the new repo dir
       Find.find(gem_template_dir).each do |path|
@@ -171,13 +167,8 @@ module AsciiBinder
         end
       end
 
-      # Initialize the git repo and check everything in
-      g = nil
-      begin
-        g = Git.init(source_dir)
-      rescue Exception => e
-        raise "Could not initialize git repo in '#{source_dir}': #{e.message}"
-      end
+      # Initialize the git repo
+      Git.init(source_dir)
     end
 
     def find_topic_files

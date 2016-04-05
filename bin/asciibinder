@@ -13,8 +13,9 @@ def call_generate(branch_group, distro, page)
   end
   begin
     generate_docs(branch_group, distro, page)
-  rescue Exception => e
-    Trollop::die "Could not generate docs: #{e.message}"
+  rescue => e
+    message = "#{e.class.name}: #{e.message} at\n    #{e.backtrace.join("\n    ")}"
+    Trollop::die "Could not generate docs:\n#{message}"
   end
 end
 
