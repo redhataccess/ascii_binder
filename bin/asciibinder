@@ -20,10 +20,19 @@ def call_generate(branch_group, distro, page)
 end
 
 def repo_check(repo_dir)
-  ['.git','_build_cfg.yml','_distro_map.yml','_templates'].each do |file|
+  missing_files = false
+  # These must all be present
+  ['.git','_distro_map.yml','_templates'].each do |file|
     unless File.exist?(File.join(repo_dir, file))
-      Trollop::die "The specified repo directory '#{repo_dir}' does not appear to be an AsciiBinder repo."
+      missing_files = true
     end
+  end
+  # Either of these must be present
+  unless File.exist?(File.join(repo_dir, '_build_cfg.yml')) or File.exist?(File.join(repo_dir, '_topic_map.yml'))
+    missing_files = true
+  end
+  if missing_files
+    Trollop::die "The specified repo directory '#{repo_dir}' does not appear to be an AsciiBinder repo."
   end
 end
 

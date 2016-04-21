@@ -71,8 +71,8 @@ module AsciiBinder
     def_delegators self, :source_dir, :set_source_dir, :template_dir, :preview_dir, :package_dir, :gem_root_dir, :stylesheet_dir, :javascript_dir, :image_dir
 
     BUILD_FILENAME      = '_build_cfg.yml'
+    TOPIC_MAP_FILENAME  = '_topic_map.yml'
     DISTRO_MAP_FILENAME = '_distro_map.yml'
-    BUILDER_DIRNAME     = '_build_system'
     PREVIEW_DIRNAME     = '_preview'
     PACKAGE_DIRNAME     = '_package'
     STYLESHEET_DIRNAME  = '_stylesheets'
@@ -133,7 +133,14 @@ module AsciiBinder
     end
 
     def build_config_file
-      @build_config_file ||= File.join(source_dir,BUILD_FILENAME)
+      use_file = TOPIC_MAP_FILENAME
+      unless File.exist?(File.join(source_dir,TOPIC_MAP_FILENAME))
+        # The new filename '_topic_map.yml' couldn't be found;
+        # switch to the old one and warn the user.
+        use_file = BUILD_FILENAME
+        puts "WARNING: '#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'."
+      end
+      use_file
     end
 
     def distro_map_file
@@ -146,7 +153,7 @@ module AsciiBinder
 
     # Protip: Don't cache this! It needs to be reread every time we change branches.
     def build_config
-      validate_config(YAML.load_stream(open(build_config_file)))
+      validate_config(YAML.load_stream(open(File.join(source_dir,build_config_file))))
     end
 
     def create_new_repo
@@ -208,7 +215,7 @@ module AsciiBinder
         end
       end
       if nonexistent_topics.length > 0
-        puts "\nWARNING: The _build_cfg.yml file on branch '#{branch}' references nonexistant topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
+        puts "\nWARNING: The #{build_config_file} file on branch '#{branch}' references nonexistant topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
       end
     end
 
@@ -539,7 +546,7 @@ module AsciiBinder
         remove_found_config_files(local_branch,branch_build_config,branch_orphan_files)
 
         if branch_orphan_files.length > 0 and single_page.nil?
-          puts "\nWARNING: Branch '#{local_branch}' includes the following .adoc files that are not referenced in the _build_cfg.yml file:\n" + branch_orphan_files.map{ |file| "- #{file}" }.join("\n")
+          puts "\nWARNING: Branch '#{local_branch}' includes the following .adoc files that are not referenced in the #{build_config_file} file:\n" + branch_orphan_files.map{ |file| "- #{file}" }.join("\n")
         end
 
         # Run all distros.
