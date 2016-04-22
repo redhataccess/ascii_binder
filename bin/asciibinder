@@ -210,7 +210,7 @@ elsif repo_dir.nil?
       if cmd_opts[:dir] != ''
         repo_dir = Pathname.new(cmd_opts[:dir])
       else
-        repo_dir = File.join(Pathname.pwd, cmd_opts[:giturl].split('/')[-1].split('.')[0])
+        repo_dir = Pathname.new(File.join(Pathname.pwd, cmd_opts[:giturl].split('/')[-1].split('.')[0]))
       end
     else
       repo_dir = Pathname.new(ARGV.shift)
