@@ -85,6 +85,22 @@ module AsciiBinder
       Time.now.utc
     end
 
+    def notice(hey,message,newline = false)
+      # TODO: (maybe) redirect everything to stderr
+      if newline
+        puts "\n"
+      end
+      puts "#{hey}: #{message}"
+    end
+
+    def warning(message,newline = false)
+      notice ("WARNING", message, newline)
+    end
+
+    def nl_warning(message)
+      warning (message, true)
+    end
+
     def git
       @git ||= Git.open(source_dir)
     end
@@ -138,7 +154,7 @@ module AsciiBinder
         # The new filename '_topic_map.yml' couldn't be found;
         # switch to the old one and warn the user.
         use_file = BUILD_FILENAME
-        puts "WARNING: '#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'."
+        warning "'#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'."
       end
       use_file
     end
@@ -215,7 +231,7 @@ module AsciiBinder
         end
       end
       if nonexistent_topics.length > 0
-        puts "\nWARNING: The #{build_config_file} file on branch '#{branch}' references nonexistant topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
+        nl_warning "The #{build_config_file} file on branch '#{branch}' references nonexistant topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
       end
     end
 
@@ -546,7 +562,7 @@ module AsciiBinder
         remove_found_config_files(local_branch,branch_build_config,branch_orphan_files)
 
         if branch_orphan_files.length > 0 and single_page.nil?
-          puts "\nWARNING: Branch '#{local_branch}' includes the following .adoc files that are not referenced in the #{build_config_file} file:\n" + branch_orphan_files.map{ |file| "- #{file}" }.join("\n")
+          nl_warning "Branch '#{local_branch}' includes the following .adoc files that are not referenced in the #{build_config_file} file:\n" + branch_orphan_files.map{ |file| "- #{file}" }.join("\n")
         end
 
         # Run all distros.
