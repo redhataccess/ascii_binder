@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "bundler", "~> 1.7"
   spec.add_dependency "rake", "~> 10.0"
 
-  spec.add_dependency 'asciidoctor'
+  spec.add_dependency 'asciidoctor', '~> 1.5.4'
   spec.add_dependency 'asciidoctor-diagram'
   spec.add_dependency 'git'
   spec.add_dependency 'guard'

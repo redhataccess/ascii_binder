@@ -94,11 +94,11 @@ module AsciiBinder
     end
 
     def warning(message,newline = false)
-      notice ("WARNING", message, newline)
+      notice("WARNING",message,newline)
     end
 
     def nl_warning(message)
-      warning (message, true)
+      warning(message,true)
     end
 
     def git
@@ -487,6 +487,7 @@ module AsciiBinder
         'idprefix=',
         'idseparator=-',
         'sectanchors',
+        'data-uri',
       ].concat(more_attrs)
     end
 
@@ -759,17 +760,10 @@ module AsciiBinder
         "product-author=#{distro_config["author"]}"
       ])
 
-      # Because we render only the body of the article with AsciiDoctor, the full article title
-      # would be lost in conversion. So, use the _build_cfg.yml 'Name' as a fallback but try
-      # to read the full article title out of the file itself.
-      file_lines    = topic_adoc.split("\n")
-      article_title = topic['Name']
-      if file_lines.length > 0
-        article_title  = file_lines[0].gsub(/^\=\s+/, '').gsub(/\s+$/, '').gsub(/\{product-title\}/, distro_config["name"]).gsub(/\{product-version\}/, branch_config["name"])
-      end
-      topic_adoc = file_lines.join("\n")
+      doc = Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
+      article_title = doc.doctitle || topic['Name']
 
-      topic_html = Asciidoctor.render topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
+      topic_html = doc.render
       dir_depth  = ''
       if branch_config['dir'].split('/').length > 1
         dir_depth = '../' * (branch_config['dir'].split('/').length - 1)
