@@ -197,7 +197,9 @@ module AsciiBinder
     def find_topic_files
       file_list = []
       Find.find(source_dir).each do |path|
-        next if path.nil? or not path =~ /.*\.adoc/ or path =~ /README/ or path =~ /\/old\//
+        # Only consider .adoc files and ignore README, and anything in
+        # directories whose names begin with 'old' or '_' (underscore)
+        next if path.nil? or not path =~ /.*\.adoc/ or path =~ /README/ or path =~ /\/old\// or path =~ /\/_/
         src_path = Pathname.new(path).sub(source_dir,'').to_s
         next if src_path.split('/').length < 3
         file_list << src_path
