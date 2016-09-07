@@ -355,7 +355,10 @@ module AsciiBinder
       end
       # Check for right format of topic group values
       ['Name','Dir'].each do |group_key|
-        if not group[group_key].is_a?(String)
+        if [true, false].include?(group[group_key])
+          raise "One of the topic groups in #{build_config_file} is using a reserved YAML keyword for the #{group_key} setting. In order to prevent your text from being turned into a true/false value, wrap it in quotes."
+        end
+        if not group[group_key].kind_of?(String)
           raise "One of the topic groups in #{build_config_file} is not using a string for the #{group_key} setting; current value is #{group[group_key].inspect}"
         end
         if group[group_key].empty? or group[group_key].match BLANK_STRING_RE
@@ -748,6 +751,24 @@ module AsciiBinder
       single_page    = options[:single_page]
       site_name      = options[:site_name]
 
+      # Distro Map settings can be overridden on a per-branch
+      # basis. This only works for top-level (string) values
+      # of the distro config and -not- the 'site' key.
+      branchwise_distro_config = {}
+      distro_config.each do |key,value|
+        next unless distro_config[key].kind_of?(String)
+        branchwise_distro_config[key] = value
+      end
+      if branch_config.has_key?('distro-overrides')
+        branch_config['distro-overrides'].each do |key,value|
+          if key == 'site'
+            puts "WARNING: The 'site' value of the distro config cannot be overriden on a branch-by-branch basis."
+            next
+          end
+          branchwise_distro_config[key] = value
+        end
+      end
+
       src_file_path = File.join(src_group_path,"#{topic['File']}.adoc")
       tgt_file_path = File.join(tgt_group_path,"#{topic['File']}.html")
       if single_page.nil?
@@ -757,9 +778,9 @@ module AsciiBinder
       page_attrs = asciidoctor_page_attrs([
         "imagesdir=#{src_group_path}/images",
         distro,
-        "product-title=#{distro_config["name"]}",
+        "product-title=#{branchwise_distro_config["name"]}",
         "product-version=#{branch_config["name"]}",
-        "product-author=#{distro_config["author"]}"
+        "product-author=#{branchwise_distro_config["author"]}"
       ])
 
       doc = Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
@@ -775,9 +796,9 @@ module AsciiBinder
       end
       page_args = {
         :distro_key       => distro,
-        :distro           => distro_config["name"],
+        :distro           => branchwise_distro_config["name"],
         :site_name        => site_name,
-        :site_url         => distro_config["site_url"],
+        :site_url         => branchwise_distro_config["site_url"],
         :topic_url        => "#{branch_config['dir']}/#{topic_path}.html",
         :version          => branch_config["name"],
         :group_title      => topic_group['Name'],
