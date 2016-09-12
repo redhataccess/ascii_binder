@@ -837,8 +837,12 @@ module AsciiBinder
 
             # Now build a sitemap
             site_dir_path = Pathname.new(site_dir)
-            SitemapGenerator::Sitemap.default_host = site_config[:url]
-            SitemapGenerator::Sitemap.create( :compress => false, :filename => File.join(site_dir,'sitemap') ) do
+            SitemapGenerator::Sitemap.create(
+              :default_host => site_config[:url],
+              :public_path  => site_dir_path,
+              :compress     => false,
+              :filename     => File.join(site_dir,'sitemap')
+            ) do
               file_list = Find.find(site_dir).select{ |path| not path.nil? and path =~ /.*\.html$/ }.map{ |path| '/' + Pathname.new(path).relative_path_from(site_dir_path).to_s }
               file_list.each do |file|
                 add(file, :changefreq => 'daily')
