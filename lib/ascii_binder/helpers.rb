@@ -68,7 +68,11 @@ module AsciiBinder
       @image_dir ||= File.join(source_dir,IMAGE_DIRNAME)
     end
 
-    def_delegators self, :source_dir, :set_source_dir, :template_dir, :preview_dir, :package_dir, :gem_root_dir, :stylesheet_dir, :javascript_dir, :image_dir
+    def self.fonts_dir
+      @fonts_dir ||= File.join(source_dir,FONTS_DIRNAME)
+    end
+
+    def_delegators self, :source_dir, :set_source_dir, :template_dir, :preview_dir, :package_dir, :gem_root_dir, :stylesheet_dir, :javascript_dir, :image_dir, :fonts_dir
 
     BUILD_FILENAME      = '_build_cfg.yml'
     TOPIC_MAP_FILENAME  = '_topic_map.yml'
@@ -78,6 +82,7 @@ module AsciiBinder
     STYLESHEET_DIRNAME  = '_stylesheets'
     JAVASCRIPT_DIRNAME  = '_javascripts'
     IMAGE_DIRNAME       = '_images'
+    FONTS_DIRNAME       = '_fonts'
     BLANK_STRING_RE     = Regexp.new('^\s*$')
     IFDEF_STRING_RE     = Regexp.new('ifdef::(.+?)\[\]')
 
@@ -611,11 +616,13 @@ module AsciiBinder
           branch_stylesheet_dir = File.join(branch_path,STYLESHEET_DIRNAME)
           branch_javascript_dir = File.join(branch_path,JAVASCRIPT_DIRNAME)
           branch_image_dir      = File.join(branch_path,IMAGE_DIRNAME)
+          branch_fonts_dir      = File.join(branch_path,FONTS_DIRNAME)
 
           # Copy files into the preview area.
           [[stylesheet_dir, '*css', branch_stylesheet_dir],
            [javascript_dir, '*js',  branch_javascript_dir],
-           [image_dir,      '*',    branch_image_dir]].each do |dgroup|
+           [image_dir,      '*',    branch_image_dir],
+           [fonts_dir,      '*',    branch_fonts_dir]].each do |dgroup|
             src_dir = dgroup[0]
             glob    = dgroup[1]
             tgt_dir = dgroup[2]
@@ -813,6 +820,7 @@ module AsciiBinder
         :css_path         => "../../#{dir_depth}#{branch_config["dir"]}/#{STYLESHEET_DIRNAME}/",
         :javascripts_path => "../../#{dir_depth}#{branch_config["dir"]}/#{JAVASCRIPT_DIRNAME}/",
         :images_path      => "../../#{dir_depth}#{branch_config["dir"]}/#{IMAGE_DIRNAME}/",
+        :fonts_path      => "../../#{dir_depth}#{branch_config["dir"]}/#{FONTS_DIRNAME}/",
         :site_home_path   => "../../#{dir_depth}index.html",
         :template_path    => template_dir,
       }
@@ -849,7 +857,7 @@ module AsciiBinder
             working_branch_site_index = File.join(source_dir,'index-' + site + '.html')
             if File.exists?(working_branch_site_index)
               FileUtils.cp(working_branch_site_index,File.join(package_dir,site,'index.html'))
-              ['_images','_stylesheets'].each do |support_dir|
+              ['_images','_stylesheets','_fonts'].each do |support_dir|
                 FileUtils.cp_r(File.join(source_dir,support_dir),File.join(package_dir,site,support_dir))
               end
             else
