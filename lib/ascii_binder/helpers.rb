@@ -845,15 +845,26 @@ module AsciiBinder
           if File.directory?(site_dir)
             puts "\nBuilding #{site} site."
 
-            # With this update, site index files will always come from the master branch
-            working_branch_site_index = File.join(source_dir,'index-' + site + '.html')
-            if File.exists?(working_branch_site_index)
-              FileUtils.cp(working_branch_site_index,File.join(package_dir,site,'index.html'))
-              ['_images','_stylesheets'].each do |support_dir|
-                FileUtils.cp_r(File.join(source_dir,support_dir),File.join(package_dir,site,support_dir))
+            # Any files in the root of the docs repo with names ending in:
+            #     *-#{site}.html
+            # will get copied into the root dir of the packaged site with
+            # the site name stripped out.
+            #
+            # Example: for site name 'commercial', the files:
+            #     * index-commercial.html would end up as #{site_root}/index.html
+            #     * search-commercial.html would end up as #{site_root}/search.html
+            #     * index-community.html would be ignored
+            site_files = Dir.glob(File.join(source_dir, '*-' + site + '.html'))
+            unless site_files.empty?
+              site_files.each do |fpath|
+                target_basename = File.basename(fpath).gsub(/-#{site}\.html$/, '.html')
+                FileUtils.cp(fpath,File.join(package_dir,site,target_basename))
               end
             else
               FileUtils.cp(File.join(preview_dir,distro,'index.html'),File.join(package_dir,site,'index.html'))
+            end
+            ['_images','_stylesheets'].each do |support_dir|
+              FileUtils.cp_r(File.join(source_dir,support_dir),File.join(package_dir,site,support_dir))
             end
 
             # Now build a sitemap
