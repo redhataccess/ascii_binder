@@ -245,7 +245,7 @@ module AsciiBinder
       site_map = {}
       distro_map.each do |distro,distro_config|
         if not site_map.has_key?(distro_config["site"])
-          site_map[distro_config["site"]] = { :distros => {}, :name => distro_config['site_name'], :url => distro_config['site_url'], :branches => [] }
+          site_map[distro_config["site"]] = { :distros => {}, :name => distro_config['site_name'], :url => distro_config['site_url'], :branches => ['master'] }
         end
         site_map[distro_config["site"]][:distros][distro] = distro_config["branches"]
         distro_config["branches"].keys.each do |branch_key|
