@@ -291,8 +291,9 @@ when "build"
   call_generate(branch_group,build_distro,refresh_page)
 when "package"
   clean_up
-  call_generate(:publish,'',nil)
   package_site = cmd_opts[:site] || ''
+  branch_group = package_site == '' ? :publish : "publish_#{package_site}".to_sym
+  call_generate(branch_group,'',nil)
   package_docs(package_site)
 when "watch"
   if !dir_empty?(preview_dir)

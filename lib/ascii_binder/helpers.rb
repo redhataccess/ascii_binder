@@ -245,16 +245,20 @@ module AsciiBinder
       site_map = {}
       distro_map.each do |distro,distro_config|
         if not site_map.has_key?(distro_config["site"])
-          site_map[distro_config["site"]] = { :distros => {}, :name => distro_config['site_name'], :url => distro_config['site_url'] }
+          site_map[distro_config["site"]] = { :distros => {}, :name => distro_config['site_name'], :url => distro_config['site_url'], :branches => [] }
         end
         site_map[distro_config["site"]][:distros][distro] = distro_config["branches"]
+        distro_config["branches"].keys.each do |branch_key|
+          next if site_map[distro_config["site"]][:branches].include?(branch_key)
+          site_map[distro_config["site"]][:branches] << branch_key
+        end
       end
       site_map
     end
 
     def distro_branches(use_distro='')
       use_distro_list = use_distro == '' ? distro_map.keys : [use_distro]
-      distro_map.select{ |dkey,dval| use_distro_list.include?(dkey) }.map{ |distro,dconfig| dconfig["branches"].keys }.flatten
+      distro_map.select{ |dkey,dval| use_distro_list.include?(dkey) }.map{ |distro,dconfig| dconfig["branches"].keys }.flatten.uniq
     end
 
     def branch_group_branches
@@ -262,6 +266,9 @@ module AsciiBinder
         group_branches = Hash.new
         group_branches[:working_only] = [local_branches[0]]
         group_branches[:publish] = distro_branches
+        site_map.each do |site,site_config|
+          group_branches["publish_#{site}".to_sym] = site_config[:branches]
+        end
         group_branches[:all] = local_branches
         group_branches
       end
@@ -582,7 +589,7 @@ module AsciiBinder
             current_distro_branches = distro_branches(distro)
 
             # In publish mode we only build "valid" distro-branch combos from the distro map
-            if branch_group == :publish and not current_distro_branches.include?(local_branch)
+            if branch_group.to_s.start_with?("publish") and not current_distro_branches.include?(local_branch)
               next
             end
 
