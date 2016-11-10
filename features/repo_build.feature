@@ -3,6 +3,12 @@ Feature: asciibinder build
   Causes the utility to process one or more distro/branch combinations,
   transforming AsciiDoc files to a unified docs set in HTML
 
+  Scenario: A user wants to do any build in a repo with an invalid distro map
+    Given an invalid AsciiBinder docs repo due to a malformed distro map
+    When the user runs `asciibinder build` on that repo directory
+    Then the program exits with a warning
+
+
   Scenario: A user wants to build all distros against the current repo branch
     Given a valid AsciiBinder docs repo with multiple distros
     When the user runs `asciibinder build` on that repo directory
