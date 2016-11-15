@@ -1,0 +1,36 @@
+---
+Name: AsciiBinder Doc Project
+Dir: welcome
+Topics:
+  - Name: Welcome
+    File: index
+  - Name: Subtopics
+    Dir: subtopics
+    Topics:
+      - Name: All Distros
+        File: index
+      - Name: MAIN_ONLY_TOPIC
+        File: main_only_topic
+        Distros: distro_main
+      - Name: TEST_ONLY_TOPIC
+        File: test_only_topic
+        Distros: distro_test
+      - Name: Wilcard All
+        File: wildcard_all
+        Distros: distro_*
+
+---
+Name: MAIN_ONLY_TOPIC_GROUP
+Dir: main_only_topic_group
+Distros: distro_main
+Topics:
+  - Name: MAIN_ONLY_WELCOME
+    File: index
+
+---
+Name: TEST_ONLY_TOPIC_GROUP
+Dir: test_only_topic_group
+Distros: distro_test
+Topics:
+  - Name: TEST_ONLY_WELCOME
+    File: index

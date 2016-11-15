@@ -1,0 +1,17 @@
+= {product-title} {product-version} Documentation
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+DIRECTIVE-TAGGED DOC
+
+Line 1: This should be visible in all distros
+
+ifdef::distro_main[]
+Line 2: This should only be visible in distro_main
+endif::[]
+
+ifdef::distro_test[]
+Line 3: This should only be visible in distro_test
+endif::[]
