@@ -868,7 +868,11 @@ module AsciiBinder
                 FileUtils.cp(fpath,File.join(package_dir,site,target_basename))
               end
             else
-              FileUtils.cp(File.join(preview_dir,distro,'index.html'),File.join(package_dir,site,'index.html'))
+              if File.exists?(File.join(preview_dir,distro,'index.html'))
+                  FileUtils.cp(File.join(preview_dir,distro,'index.html'),File.join(package_dir,site,'index.html'))
+              else
+                  puts "No index file to copy."
+              end
             end
             ['_images','_stylesheets'].each do |support_dir|
               FileUtils.cp_r(File.join(source_dir,support_dir),File.join(package_dir,site,support_dir))
