@@ -1,0 +1,12 @@
+language: ruby
+rvm:
+  - 2.3.3
+gemfile: Gemfile
+after_install: gem list
+script: bundle exec cucumber
+notifications:
+  email:
+    #recipients:
+    #  - dev@lists.openshift.redhat.com
+  irc:
+    - "irc.freenode.org#asciibinder"
