@@ -233,7 +233,7 @@ module AsciiBinder
         end
       end
       if nonexistent_topics.length > 0
-        nl_warning "The #{build_config_file} file on branch '#{branch}' references nonexistant topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
+        nl_warning "The #{build_config_file} file on branch '#{branch}' references nonexistent topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
       end
     end
 
