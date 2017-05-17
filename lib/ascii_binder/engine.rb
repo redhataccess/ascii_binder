@@ -1,7 +1,9 @@
 require 'ascii_binder/distro_branch'
 require 'ascii_binder/distro_map'
+require 'ascii_binder/helpers'
 require 'ascii_binder/site_map'
 require 'ascii_binder/template_renderer'
+require 'ascii_binder/topic_map'
 require 'asciidoctor'
 require 'asciidoctor/cli'
 require 'asciidoctor-diagram'
@@ -14,76 +16,11 @@ require 'pathname'
 require 'sitemap_generator'
 require 'trollop'
 require 'yaml'
-require 'forwardable'
+
+include AsciiBinder::Helpers
 
 module AsciiBinder
   module Engine
-    extend Forwardable
-
-    def self.source_dir
-      @source_dir ||= `git rev-parse --show-toplevel`.chomp
-    end
-
-    def self.gem_root_dir
-      @gem_root_dir ||= File.expand_path("../../../", __FILE__)
-    end
-
-    def self.set_source_dir(source_dir)
-      @source_dir = source_dir
-    end
-
-    def template_renderer
-      @template_renderer ||= TemplateRenderer.new(source_dir, template_dir)
-    end
-
-    def self.template_dir
-      @template_dir ||= File.join(source_dir,'_templates')
-    end
-
-    def self.preview_dir
-      @preview_dir ||= begin
-        lpreview_dir = File.join(source_dir,PREVIEW_DIRNAME)
-        if not File.exists?(lpreview_dir)
-          Dir.mkdir(lpreview_dir)
-        end
-        lpreview_dir
-      end
-    end
-
-    def self.package_dir
-      @package_dir ||= begin
-        lpackage_dir = File.join(source_dir,PACKAGE_DIRNAME)
-        if not File.exists?(lpackage_dir)
-          Dir.mkdir(lpackage_dir)
-        end
-        lpackage_dir
-      end
-    end
-
-    def self.stylesheet_dir
-      @stylesheet_dir ||= File.join(source_dir,STYLESHEET_DIRNAME)
-    end
-
-    def self.javascript_dir
-      @javascript_dir ||= File.join(source_dir,JAVASCRIPT_DIRNAME)
-    end
-
-    def self.image_dir
-      @image_dir ||= File.join(source_dir,IMAGE_DIRNAME)
-    end
-
-    def_delegators self, :source_dir, :set_source_dir, :template_dir, :preview_dir, :package_dir, :gem_root_dir, :stylesheet_dir, :javascript_dir, :image_dir
-
-    BUILD_FILENAME      = '_build_cfg.yml'
-    TOPIC_MAP_FILENAME  = '_topic_map.yml'
-    DISTRO_MAP_FILENAME = '_distro_map.yml'
-    PREVIEW_DIRNAME     = '_preview'
-    PACKAGE_DIRNAME     = '_package'
-    STYLESHEET_DIRNAME  = '_stylesheets'
-    JAVASCRIPT_DIRNAME  = '_javascripts'
-    IMAGE_DIRNAME       = '_images'
-    BLANK_STRING_RE     = Regexp.new('^\s*$')
-    IFDEF_STRING_RE     = Regexp.new('ifdef::(.+?)\[\]')
 
     def build_date
       Time.now.utc
@@ -152,24 +89,34 @@ module AsciiBinder
       @working_branch ||= local_branches[0]
     end
 
-    def build_config_file
-      use_file = TOPIC_MAP_FILENAME
-      unless File.exist?(File.join(source_dir,TOPIC_MAP_FILENAME))
-        # The new filename '_topic_map.yml' couldn't be found;
-        # switch to the old one and warn the user.
-        use_file = BUILD_FILENAME
-        warning "'#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'."
-      end
-      use_file
-    end
-
     def dir_empty?(dir)
       Dir.entries(dir).select{ |f| not f.start_with?('.') }.empty?
     end
 
-    # Protip: Don't cache this! It needs to be reread every time we change branches.
-    def build_config
-      validate_config(YAML.load_stream(open(File.join(source_dir,build_config_file))))
+
+    # Protip: Don't cache these! The topic map needs to be reread every time we change branches.
+    def topic_map_file
+      topic_file = TOPIC_MAP_FILENAME
+      unless File.exist?(File.join(source_dir,topic_file))
+        # The new filename '_topic_map.yml' couldn't be found;
+        # switch to the old one and warn the user.
+        topic_file = BUILD_FILENAME
+        unless File.exist?(File.join(source_dir,topic_file))
+          # Critical error - no topic map file at all.
+          Trollop::die "Could not find any topic map file ('#{TOPIC_MAP_FILENAME}' or '#{BUILD_FILENAME}') at #{source_dir} in branch '#{git.branch}'"
+        end
+        warning "'#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'."
+      end
+      topic_file
+    end
+
+    def topic_map
+      topic_map = AsciiBinder::TopicMap.new(topic_map_file,distro_map.distro_keys)
+      unless topic_map.is_valid?
+        errors = topic_map.errors
+        Trollop::die "The topic map file at '#{topic_map_file}' contains the following errors:\n- " + errors.join("\n- ") + "\n"
+      end
+      return topic_map
     end
 
     def create_new_repo
@@ -210,30 +157,16 @@ module AsciiBinder
       }
     end
 
-    def remove_found_config_files(branch,branch_build_config,branch_topic_files)
+    def remove_found_topic_files(branch,branch_topic_map,branch_topic_files)
       nonexistent_topics = []
-      branch_build_config.each do |topic_group|
-        tg_dir = topic_group['Dir']
-        topic_group['Topics'].each do |topic|
-          if topic.has_key?('File')
-            topic_path = tg_dir + '/' + topic['File']
-            result     = branch_topic_files.delete(topic_path)
-            if result.nil?
-              nonexistent_topics << topic_path
-            end
-          elsif topic.has_key?('Dir')
-            topic_path = tg_dir + '/' + topic['Dir'] + '/'
-            topic['Topics'].each do |subtopic|
-              result = branch_topic_files.delete(topic_path + subtopic['File'])
-              if result.nil?
-                nonexistent_topics << topic_path + subtopic['File']
-              end
-            end
-          end
+      branch_topic_map.filepaths.each do |topic_map_filepath|
+        result = branch_topic_files.delete(topic_map_filepath)
+        if result.nil?
+          nonexistent_topics << topic_map_filepath
         end
       end
       if nonexistent_topics.length > 0
-        nl_warning "The #{build_config_file} file on branch '#{branch}' references nonexistent topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
+        nl_warning "The #{topic_map_file} file on branch '#{branch}' references nonexistent topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
       end
     end
 
@@ -319,169 +252,6 @@ module AsciiBinder
       href ? "<a href=\"#{addl_level}#{href}\">#{text}</a>" : text
     end
 
-    def parse_distros distros_string, for_validation=false
-      values   = distros_string.split(',').map(&:strip)
-      # Don't bother with glob expansion if 'all' is in the list.
-      return distro_map.distro_keys if values.include?('all')
-
-      expanded = expand_distro_globs(values)
-      return expanded if for_validation
-      return expanded.uniq
-    end
-
-    def expand_distro_globs(values)
-      values.flat_map do |value|
-        value_regex = Regexp.new("\\A#{value.gsub("*", ".*")}\\z")
-        distro_map.distro_keys.select { |k| value_regex.match(k) }
-      end.uniq
-    end
-
-    def validate_distros distros_string
-      return false if not distros_string.is_a?(String)
-      values = parse_distros(distros_string, true)
-      values.each do |v|
-        return false if not v == 'all' and not distro_map.distro_keys.include?(v)
-      end
-      return true
-    end
-
-    def validate_topic_group group, info
-      # Check for presence of topic group keys
-      ['Name','Dir','Topics'].each do |group_key|
-        if not group.has_key?(group_key)
-          raise "One of the topic groups in #{build_config_file} is missing the '#{group_key}' key."
-        end
-      end
-      # Check for right format of topic group values
-      ['Name','Dir'].each do |group_key|
-        if [true, false].include?(group[group_key])
-          raise "One of the topic groups in #{build_config_file} is using a reserved YAML keyword for the #{group_key} setting. In order to prevent your text from being turned into a true/false value, wrap it in quotes."
-        end
-        if not group[group_key].kind_of?(String)
-          raise "One of the topic groups in #{build_config_file} is not using a string for the #{group_key} setting; current value is #{group[group_key].inspect}"
-        end
-        if group[group_key].empty? or group[group_key].match BLANK_STRING_RE
-          raise "One of the topic groups in #{build_config_file} is using a blank value for the #{group_key} setting."
-        end
-      end
-      if not File.exists?(File.join(source_dir,info[:path]))
-        raise "In #{build_config_file}, the directory path '#{info[:path]}' for topic group #{group['Name']} does not exist under #{source_dir}"
-      end
-      # Validate the Distros setting
-      if group.has_key?('Distros')
-        if not validate_distros(group['Distros'])
-          key_list = distro_map.distro_keys.map{ |k| "'#{k}'" }.sort.join(', ')
-          raise "In #{build_config_file}, the Distros value #{group['Distros'].inspect} for topic group #{group['Name']} is not valid. Legal values are 'all', #{key_list}, or a comma-separated list of legal values."
-        end
-        group['Distros'] = parse_distros(group['Distros'])
-      else
-        group['Distros'] = parse_distros('all')
-      end
-      if not group['Topics'].is_a?(Array)
-        raise "The #{group['Name']} topic group in #{build_config_file} is malformed; the build system is expecting an array of 'Topic' definitions."
-      end
-      # Generate an ID for this topic group
-      group['ID'] = camelize group['Name']
-      if info.has_key?(:parent_id)
-        group['ID'] = "#{info[:parent_id]}::#{group['ID']}"
-      end
-    end
-
-    def validate_topic_item item, info
-      ['Name','File'].each do |topic_key|
-        if not item[topic_key].is_a?(String)
-          raise "In #{build_config_file}, topic group #{info[:group]}, one of the topics is not using a string for the '#{topic_key}' setting; current value is #{item[topic_key].inspect}"
-        end
-        if item[topic_key].empty? or item[topic_key].match BLANK_STRING_RE
-          raise "In #{build_config_file}, topic group #{topic_group['Name']}, one of the topics is using a blank value for the '#{topic_key}' setting"
-        end
-      end
-      # Normalize the filenames
-      if item['File'].end_with?('.adoc')
-        item['File'] = item['File'][0..-6]
-      end
-      if not File.exists?(File.join(source_dir,info[:path],"#{item['File']}.adoc"))
-        raise "In #{build_config_file}, could not find file #{item['File']} under directory #{info[:path]} for topic #{item['Name']} in topic group #{info[:group]}."
-      end
-      if item.has_key?('Distros')
-        if not validate_distros(item['Distros'])
-          key_list = distro_map.distro_keys.map{ |k| "'#{k}'" }.sort.join(', ')
-          raise "In #{build_config_file}, the Distros value #{item['Distros'].inspect} for topic item #{item['Name']} in topic group #{info[:group]} is not valid. Legal values are 'all', #{key_list}, or a comma-separated list of legal values."
-        end
-        item['Distros'] = parse_distros(item['Distros'])
-      else
-        item['Distros'] = parse_distros('all')
-      end
-      # Generate an ID for this topic
-      item['ID'] = "#{info[:group_id]}::#{camelize(item['Name'])}"
-    end
-
-    def validate_config config_data
-      # Validate/normalize the config file straight away
-      if not config_data.is_a?(Array)
-        raise "The configuration in #{build_config_file} is malformed; the build system is expecting an array of topic groups."
-      end
-      config_data.each do |topic_group|
-        validate_topic_group(topic_group, { :path => topic_group['Dir'] })
-        # Now buzz through the topics
-        topic_group['Topics'].each do |topic|
-          # Is this an actual topic or a subtopic group?
-          is_subtopic_group = topic.has_key?('Dir') and topic.has_key?('Topics') and not topic.has_key?('File')
-          is_topic_item = topic.has_key?('File') and not topic.has_key?('Dir') and not topic.has_key?('Topics')
-          if not is_subtopic_group and not is_topic_item
-            raise "This topic could not definitively be determined to be a topic item or a subtopic group:\n#{topic.inspect}"
-          end
-          if is_topic_item
-            validate_topic_item(topic, { :group => topic_group['Name'], :group_id => topic_group['ID'], :path => topic_group['Dir'] })
-          elsif is_subtopic_group
-            topic_path = "#{topic_group['Dir']}/#{topic['Dir']}"
-            validate_topic_group(topic, { :path => topic_path, :parent_id => topic_group['ID'] })
-            topic['Topics'].each do |subtopic|
-              validate_topic_item(subtopic, { :group => "#{topic_group['Name']}/#{topic['Name']}", :group_id => topic['ID'], :path => topic_path })
-            end
-          end
-        end
-      end
-      config_data
-    end
-
-    def camelize text
-      text.gsub(/[^0-9a-zA-Z ]/i, '').split(' ').map{ |t| t.capitalize }.join
-    end
-
-    def nav_tree distro, branch_build_config
-      navigation = []
-      branch_build_config.each do |topic_group|
-        next if not topic_group['Distros'].include?(distro.id)
-        next if topic_group['Topics'].select{ |t| t['Distros'].include?(distro.id) }.length == 0
-        topic_list = []
-        topic_group['Topics'].each do |topic|
-          next if not topic['Distros'].include?(distro.id)
-          if topic.has_key?('File')
-            topic_list << {
-              :path => "../#{topic_group['Dir']}/#{topic['File']}.html",
-              :name => topic['Name'],
-              :id   => topic['ID'],
-            }
-          elsif topic.has_key?('Dir')
-            next if topic['Topics'].select{ |t| t['Distros'].include?(distro.id) }.length == 0
-            subtopic_list = []
-            topic['Topics'].each do |subtopic|
-              next if not subtopic['Distros'].include?(distro.id)
-              subtopic_list << {
-                :path => "../#{topic_group['Dir']}/#{topic['Dir']}/#{subtopic['File']}.html",
-                :name => subtopic['Name'],
-                :id   => subtopic['ID'],
-              }
-            end
-            topic_list << { :name => topic['Name'], :id => topic['ID'], :topics => subtopic_list }
-          end
-        end
-        navigation << { :name => topic_group['Name'], :id => topic_group['ID'], :topics => topic_list }
-      end
-      navigation
-    end
-
     def asciidoctor_page_attrs(more_attrs=[])
       [
         'source-highlighter=coderay',
@@ -502,12 +272,12 @@ module AsciiBinder
         raise "Before you can build the docs, you need at least one commit in your docs repo."
       end
 
-      single_page_dir  = []
-      single_page_file = nil
+      # Make a filepath in list form from the single_page argument
+      single_page_path = []
       if not single_page.nil?
-        single_page_dir  = single_page.split(':')[0].split('/')
-        single_page_file = single_page.split(':')[1]
-        puts "Rebuilding '#{single_page_dir.join('/')}/#{single_page_file}' on branch '#{working_branch}'."
+        single_page_path = single_page.split(':')[0].split('/')
+        single_page_path << single_page.split(':')[1]
+        puts "Rebuilding '#{single_page_path.join('/')}' on branch '#{working_branch}'."
       end
 
       if not build_distro == ''
@@ -520,7 +290,7 @@ module AsciiBinder
         puts "Building all distributions."
       end
 
-      # First, notify the user of missing local branches
+      # Notify the user of missing local branches
       missing_branches = []
       distro_map.distro_branches(build_distro).sort.each do |dbranch|
         next if local_branches.include?(dbranch)
@@ -563,20 +333,18 @@ module AsciiBinder
         # .adoc files found in the repo, and will be whittled
         # down from there.
         branch_orphan_files = find_topic_files
-        branch_build_config = build_config
-        remove_found_config_files(local_branch,branch_build_config,branch_orphan_files)
+        branch_topic_map    = topic_map
+        remove_found_topic_files(local_branch,branch_topic_map,branch_orphan_files)
 
         if branch_orphan_files.length > 0 and single_page.nil?
-          nl_warning "Branch '#{local_branch}' includes the following .adoc files that are not referenced in the #{build_config_file} file:\n" + branch_orphan_files.map{ |file| "- #{file}" }.join("\n")
+          nl_warning "Branch '#{local_branch}' includes the following .adoc files that are not referenced in the #{topic_map_file} file:\n" + branch_orphan_files.map{ |file| "- #{file}" }.join("\n")
         end
 
         # Run all distros.
         distro_map.distros.each do |distro|
           if not build_distro == ''
             # Only building a single distro; build for all indicated branches, skip the others.
-            if not build_distro == distro.id
-              next
-            end
+            next unless build_distro == distro.id
           else
             current_distro_branches = distro_map.distro_branches(distro.id)
 
@@ -591,9 +359,8 @@ module AsciiBinder
             end
           end
 
-          site_name = distro.site.name
-
-          branch_config = AsciiBinder::DistroBranch.new('',{ "name" => "Branch Build", "dir" => local_branch },distro.name,distro.author)
+          # Get the current distro / branch object
+          branch_config = AsciiBinder::DistroBranch.new('',{ "name" => "Branch Build", "dir" => local_branch },distro)
           dev_branch    = true
           if distro.branch_ids.include?(local_branch)
             branch_config = distro.branch(local_branch)
@@ -605,16 +372,10 @@ module AsciiBinder
             first_branch = false
           end
 
-          # Create the target dir
-          branch_path           = File.join(preview_dir,distro.id,branch_config.dir)
-          branch_stylesheet_dir = File.join(branch_path,STYLESHEET_DIRNAME)
-          branch_javascript_dir = File.join(branch_path,JAVASCRIPT_DIRNAME)
-          branch_image_dir      = File.join(branch_path,IMAGE_DIRNAME)
-
           # Copy files into the preview area.
-          [[stylesheet_dir, '*css', branch_stylesheet_dir],
-           [javascript_dir, '*js',  branch_javascript_dir],
-           [image_dir,      '*',    branch_image_dir]].each do |dgroup|
+          [[stylesheet_dir, '*css', branch_config.branch_stylesheet_dir],
+           [javascript_dir, '*js',  branch_config.branch_javascript_dir],
+           [image_dir,      '*',    branch_config.branch_image_dir]].each do |dgroup|
             src_dir = dgroup[0]
             glob    = dgroup[1]
             tgt_dir = dgroup[2]
@@ -624,89 +385,16 @@ module AsciiBinder
             end
           end
 
-          # Build the landing page
-          navigation = nav_tree(distro,branch_build_config)
+          # Build the navigation structure for this branch / distro
+           navigation = branch_topic_map.nav_tree(distro.id)
 
           # Build the topic files for this branch & distro
-          branch_build_config.each do |topic_group|
-            next if not topic_group['Distros'].include?(distro.id)
-            next if topic_group['Topics'].select{ |t| t['Distros'].include?(distro.id) }.length == 0
-            next if not single_page.nil? and not single_page_dir[0] == topic_group['Dir']
-            topic_group['Topics'].each do |topic|
-              src_group_path = File.join(source_dir,topic_group['Dir'])
-              tgt_group_path = File.join(branch_path,topic_group['Dir'])
-              if not File.exists?(tgt_group_path)
-                Dir.mkdir(tgt_group_path)
-              end
-              next if not topic['Distros'].include?(distro.id)
-              if topic.has_key?('File')
-                next if not single_page.nil? and not topic['File'] == single_page_file
-                topic_path = File.join(topic_group['Dir'],topic['File'])
-                configure_and_generate_page({
-                  :distro         => distro,
-                  :branch_config  => branch_config,
-                  :navigation     => navigation,
-                  :topic          => topic,
-                  :topic_group    => topic_group,
-                  :topic_path     => topic_path,
-                  :src_group_path => src_group_path,
-                  :tgt_group_path => tgt_group_path,
-                  :single_page    => single_page,
-                  :site_name      => site_name,
-                })
-              elsif topic.has_key?('Dir')
-                next if not single_page.nil? and not single_page_dir.join('/') == topic_group['Dir'] + '/' + topic['Dir']
-                topic['Topics'].each do |subtopic|
-                  next if not subtopic['Distros'].include?(distro.id)
-                  next if not single_page.nil? and not subtopic['File'] == single_page_file
-                  src_group_path = File.join(source_dir,topic_group['Dir'],topic['Dir'])
-                  tgt_group_path = File.join(branch_path,topic_group['Dir'],topic['Dir'])
-                  if not File.exists?(tgt_group_path)
-                    Dir.mkdir(tgt_group_path)
-                  end
-                  topic_path = File.join(topic_group['Dir'],topic['Dir'],subtopic['File'])
-                  configure_and_generate_page({
-                    :distro         => distro,
-                    :branch_config  => branch_config,
-                    :navigation     => navigation,
-                    :topic          => subtopic,
-                    :topic_group    => topic_group,
-                    :topic_subgroup => topic,
-                    :topic_path     => topic_path,
-                    :src_group_path => src_group_path,
-                    :tgt_group_path => tgt_group_path,
-                    :single_page    => single_page,
-                    :site_name      => site_name,
-                  })
-                end
-              end
-            end
-          end
-
-          if not single_page.nil?
-            next
-          end
-
-          # Create a distro landing page
-          # This is backwards compatible code. We can remove it when no
-          # official repo uses index.adoc. We are moving to flat HTML
-          # files for index.html
-          src_file_path = File.join(source_dir,'index.adoc')
-          if File.exists?(src_file_path)
-            topic_adoc    = File.open(src_file_path,'r').read
-            page_attrs    = asciidoctor_page_attrs([
-              "imagesdir=#{File.join(source_dir,'_site_images')}",
-              distro.id,
-              "product-title=#{distro.name}",
-              "product-version=Updated #{build_date}",
-              "product-author=#{distro.author}"
-            ])
-            topic_html = Asciidoctor.render topic_adoc, :header_footer => true, :safe => :unsafe, :attributes => page_attrs
-            File.write(File.join(preview_dir,distro.id,'index.html'),topic_html)
-          end
+          process_topic_entity_list(branch_config,single_page_path,navigation,branch_topic_map.list)
         end
 
+        # In single-page context, we're done.
         if not single_page.nil?
+          #exit 200
           return
         end
 
@@ -734,60 +422,81 @@ module AsciiBinder
       puts "\nAll builds completed."
     end
 
-    def configure_and_generate_page options
-      distro         = options[:distro]
-      branch_config  = options[:branch_config]
-      navigation     = options[:navigation]
-      topic          = options[:topic]
-      topic_group    = options[:topic_group]
-      topic_subgroup = options[:topic_subgroup]
-      topic_path     = options[:topic_path]
-      src_group_path = options[:src_group_path]
-      tgt_group_path = options[:tgt_group_path]
-      single_page    = options[:single_page]
-      site_name      = options[:site_name]
+    def process_topic_entity_list(branch_config,single_page_path,navigation,topic_entity_list,preview_path='')
+      # When called from a topic group entity, create the preview dir for that group
+      Dir.mkdir(preview_path) unless preview_path == '' or File.exists?(preview_path)
 
-      src_file_path = File.join(src_group_path,"#{topic['File']}.adoc")
-      tgt_file_path = File.join(tgt_group_path,"#{topic['File']}.html")
-      if single_page.nil?
-        puts "  - #{topic_path}"
+      topic_entity_list.each do |topic_entity|
+        # If this topic entity or any potential subentities are outside of the distro or single-page params, skip it.
+        next unless topic_entity.include?(branch_config.distro.id,single_page_path)
+
+        if topic_entity.is_group?
+          preview_path = topic_entity.preview_path(branch_config.distro.id,branch_config.dir)
+          process_topic_entity_list(branch_config,single_page_path,navigation,topic_entity.subitems,preview_path)
+        elsif topic_entity.is_topic?
+          if single_page_path.length == 0
+            puts "  - #{topic_entity.repo_path}"
+          end
+          configure_and_generate_page(topic_entity,branch_config,navigation)
+        end
       end
-      topic_adoc = File.open(src_file_path,'r').read
+    end
+
+    def configure_and_generate_page(topic,branch_config,navigation)
+      distro = branch_config.distro
+      topic_adoc = File.open(topic.source_path,'r').read
+
       page_attrs = asciidoctor_page_attrs([
-        "imagesdir=#{src_group_path}/images",
-        distro.id,
+        "imagesdir=#{File.join(topic.parent.source_path,'images')}",
+        branch_config.distro.id,
         "product-title=#{branch_config.distro_name}",
         "product-version=#{branch_config.name}",
         "product-author=#{branch_config.distro_author}"
       ])
 
       doc = Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
-      article_title = doc.doctitle || topic['Name']
+      article_title = doc.doctitle || topic.name
 
       topic_html = doc.render
       dir_depth  = ''
       if branch_config.dir.split('/').length > 1
         dir_depth = '../' * (branch_config.dir.split('/').length - 1)
       end
-      if not topic_subgroup.nil?
-        dir_depth = '../' + dir_depth
+
+      # This is logic bridges newer arbitrary-depth-tolerant code to
+      # older depth-limited code. Truly removing depth limitations will
+      # require changes to page templates in user docs repos.
+      breadcrumb     = topic.breadcrumb
+      group_title    = breadcrumb[0][:name]
+      group_id       = breadcrumb[0][:id]
+      topic_title    = breadcrumb[-1][:name]
+      topic_id       = breadcrumb[-1][:id]
+      subgroup_title = nil
+      subgroup_id    = nil
+      if breadcrumb.length == 3
+        subgroup_title = breadcrumb[1][:name]
+        subgroup_id    = breadcrumb[1][:id]
+        dir_depth      = '../' + dir_depth
       end
+
+      preview_path = topic.preview_path(distro.id,branch_config.dir)
+
       page_args = {
         :distro_key       => distro.id,
         :distro           => branch_config.distro_name,
-        :site_name        => site_name,
+        :site_name        => distro.site.name,
         :site_url         => distro.site.url,
-        :topic_url        => "#{branch_config.dir}/#{topic_path}.html",
+        :topic_url        => preview_path,
         :version          => branch_config.name,
-        :group_title      => topic_group['Name'],
-        :subgroup_title   => topic_subgroup && topic_subgroup['Name'],
-        :topic_title      => topic['Name'],
+        :group_title      => group_title,
+        :subgroup_title   => subgroup_title,
+        :topic_title      => topic_title,
         :article_title    => article_title,
         :content          => topic_html,
         :navigation       => navigation,
-        :group_id         => topic_group['ID'],
-        :subgroup_id      => topic_subgroup && topic_subgroup['ID'],
-        :topic_id         => topic['ID'],
+        :group_id         => group_id,
+        :subgroup_id      => subgroup_id,
+        :topic_id         => topic_id,
         :css_path         => "../../#{dir_depth}#{branch_config.dir}/#{STYLESHEET_DIRNAME}/",
         :javascripts_path => "../../#{dir_depth}#{branch_config.dir}/#{JAVASCRIPT_DIRNAME}/",
         :images_path      => "../../#{dir_depth}#{branch_config.dir}/#{IMAGE_DIRNAME}/",
@@ -795,7 +504,7 @@ module AsciiBinder
         :template_path    => template_dir,
       }
       full_file_text = page(page_args)
-      File.write(tgt_file_path,full_file_text)
+      File.write(preview_path,full_file_text)
     end
 
     # package_docs
