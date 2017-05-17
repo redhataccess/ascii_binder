@@ -1,3 +1,5 @@
-require "ascii_binder/version"
-require "ascii_binder/template_renderer"
+require "ascii_binder/distro_map"
+require "ascii_binder/engine"
 require "ascii_binder/helpers"
+require "ascii_binder/template_renderer"
+require "ascii_binder/version"

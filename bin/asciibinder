@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
 
-require 'ascii_binder/helpers'
+require 'ascii_binder/engine'
 require 'ascii_binder/version'
 require 'pathname'
 require 'trollop'
 
-include AsciiBinder::Helpers
+include AsciiBinder::Engine
 
 def call_generate(branch_group, distro, page)
   if page == ''

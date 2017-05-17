@@ -1,0 +1,14 @@
+---
+ascii_binder:
+  name: "    "
+  author: "    "
+  site: "    "
+  site_name: "    "
+  site_url: "    "
+  branches:
+    master:
+      name: "    "
+      dir: "    "
+    branch1:
+      name: "    "
+      dir: "    "

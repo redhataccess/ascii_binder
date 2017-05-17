@@ -17,8 +17,13 @@ Given(/^a valid AsciiBinder docs repo(.*)$/) do |repo_condition|
   initialize_test_repo(true,multiple_distros)
 end
 
-Given(/^an invalid AsciiBinder docs repo$/) do
-  initialize_test_repo(false)
+Given(/^an invalid AsciiBinder docs repo(.*)$/) do |invalid_condition|
+  if invalid_condition == ' due to a malformed distro map'
+    initialize_test_repo(true,true)
+    invalidate_distro_map
+  else
+    initialize_test_repo(false)
+  end
 end
 
 Given(/^the docs repo contains generated content$/) do

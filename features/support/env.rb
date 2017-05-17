@@ -270,6 +270,12 @@ module Helpers
     working_dir
   end
 
+  def invalidate_distro_map
+      invalid_map = File.join(gem_root,'features','support','_invalid_distro_map.yml')
+      FileUtils.cp(invalid_map,File.join(working_dir,'_distro_map.yml'))
+      system("cd #{working_dir} && git add . > /dev/null && git commit -am 'Commit invalid distro map' > /dev/null")
+  end
+
   def initialize_remote_repo
     remote_dir = Dir.mktmpdir('ascii_binder-cucumber-remote')
     FileUtils.rm_rf(remote_dir)
