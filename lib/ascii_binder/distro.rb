@@ -19,7 +19,7 @@ module AsciiBinder
         if @branch_map.has_key?(branch_name)
           Trollop::die "Error parsing #{distro_map_filepath}: distro '#{distro_key}' lists git branch '#{branch_name}' multiple times."
         end
-        @branch_map[branch_name] = AsciiBinder::DistroBranch.new(branch_name,branch_config,@name,@author)
+        @branch_map[branch_name] = AsciiBinder::DistroBranch.new(branch_name,branch_config,self)
       end
     end
 

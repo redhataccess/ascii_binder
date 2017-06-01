@@ -4,14 +4,15 @@ include AsciiBinder::Helpers
 
 module AsciiBinder
   class DistroBranch
-    attr_reader :id, :name, :dir, :distro_name, :distro_author
+    attr_reader :id, :name, :dir, :distro, :distro_name, :distro_author
 
-    def initialize(branch_name,branch_config,distro_name,distro_author)
+    def initialize(branch_name,branch_config,distro)
       @id            = branch_name
       @name          = branch_config['name']
       @dir           = branch_config['dir']
-      @distro_name   = distro_name
-      @distro_author = distro_author
+      @distro        = distro
+      @distro_name   = distro.name
+      @distro_author = distro.author
       if branch_config.has_key?('distro-overrides')
         if branch_config['distro-overrides'].has_key?('name')
           @distro_name = branch_config['distro-overrides']['name']
@@ -20,6 +21,22 @@ module AsciiBinder
           @distro_author = branch_config['distro-overrides']['author']
         end
       end
+    end
+
+    def branch_path
+      @branch_path ||= File.join(preview_dir,@distro.id,@dir)
+    end
+
+    def branch_stylesheet_dir
+      @branch_stylesheet_dir ||= File.join(branch_path,STYLESHEET_DIRNAME)
+    end
+
+    def branch_javascript_dir
+      @branch_javascript_dir ||= File.join(branch_path,JAVASCRIPT_DIRNAME)
+    end
+
+    def branch_image_dir
+      @branch_image_dir ||= File.join(branch_path,IMAGE_DIRNAME)
     end
 
     def is_valid?
