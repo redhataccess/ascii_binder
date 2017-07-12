@@ -28,29 +28,33 @@ module AsciiBinder
       text.gsub(/[^0-9a-zA-Z ]/i, '').split(' ').map{ |t| t.capitalize }.join
     end
 
-    def source_dir
-      @source_dir ||= `git rev-parse --show-toplevel`.chomp
+    def git_root_dir
+      @git_root_dir ||= `git rev-parse --show-toplevel`.chomp
     end
 
     def gem_root_dir
       @gem_root_dir ||= File.expand_path("../../../", __FILE__)
     end
 
-    def set_source_dir(source_dir)
-      @source_dir = source_dir
+    def set_docs_root_dir(docs_root_dir)
+      AsciiBinder.const_set("DOCS_ROOT_DIR", docs_root_dir)
+    end
+
+    def docs_root_dir
+      AsciiBinder::DOCS_ROOT_DIR
     end
 
     def template_renderer
-      @template_renderer ||= TemplateRenderer.new(source_dir, template_dir)
+      @template_renderer ||= TemplateRenderer.new(docs_root_dir, template_dir)
     end
 
     def template_dir
-      @template_dir ||= File.join(source_dir,'_templates')
+      @template_dir ||= File.join(docs_root_dir,'_templates')
     end
 
     def preview_dir
       @preview_dir ||= begin
-        lpreview_dir = File.join(source_dir,PREVIEW_DIRNAME)
+        lpreview_dir = File.join(docs_root_dir,PREVIEW_DIRNAME)
         if not File.exists?(lpreview_dir)
           Dir.mkdir(lpreview_dir)
         end
@@ -60,7 +64,7 @@ module AsciiBinder
 
     def package_dir
       @package_dir ||= begin
-        lpackage_dir = File.join(source_dir,PACKAGE_DIRNAME)
+        lpackage_dir = File.join(docs_root_dir,PACKAGE_DIRNAME)
         if not File.exists?(lpackage_dir)
           Dir.mkdir(lpackage_dir)
         end
@@ -69,15 +73,15 @@ module AsciiBinder
     end
 
     def stylesheet_dir
-      @stylesheet_dir ||= File.join(source_dir,STYLESHEET_DIRNAME)
+      @stylesheet_dir ||= File.join(docs_root_dir,STYLESHEET_DIRNAME)
     end
 
     def javascript_dir
-      @javascript_dir ||= File.join(source_dir,JAVASCRIPT_DIRNAME)
+      @javascript_dir ||= File.join(docs_root_dir,JAVASCRIPT_DIRNAME)
     end
 
     def image_dir
-      @image_dir ||= File.join(source_dir,IMAGE_DIRNAME)
+      @image_dir ||= File.join(docs_root_dir,IMAGE_DIRNAME)
     end
   end
 end

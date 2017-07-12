@@ -1,11 +1,13 @@
 #!/usr/bin/env ruby
 
 require 'ascii_binder/engine'
+require 'ascii_binder/helpers'
 require 'ascii_binder/version'
 require 'pathname'
 require 'trollop'
 
 include AsciiBinder::Engine
+include AsciiBinder::Helpers
 
 def call_generate(branch_group, distro, page)
   if page == ''
@@ -19,21 +21,28 @@ def call_generate(branch_group, distro, page)
   end
 end
 
-def repo_check(repo_dir)
+def repo_check(docs_basedir)
   missing_files = false
   # These must all be present
-  ['.git','_distro_map.yml','_templates'].each do |file|
-    unless File.exist?(File.join(repo_dir, file))
+  ['_distro_map.yml','_templates'].each do |file|
+    unless File.exist?(File.join(docs_basedir, file))
       missing_files = true
     end
   end
   # Either of these must be present
-  unless File.exist?(File.join(repo_dir, '_build_cfg.yml')) or File.exist?(File.join(repo_dir, '_topic_map.yml'))
+  unless File.exist?(File.join(docs_basedir, '_build_cfg.yml')) or File.exist?(File.join(docs_basedir, '_topic_map.yml'))
     missing_files = true
   end
-  if missing_files
-    Trollop::die "The specified repo directory '#{repo_dir}' does not appear to be an AsciiBinder repo."
+  if missing_files or not in_git_repo(docs_basedir)
+    Trollop::die "The specified docs base directory '#{docs_basedir}' does not appear to be part of an AsciiBinder-compatible repo."
   end
+end
+
+def in_git_repo(dir)
+  git_path = File.join(dir,'.git')
+  return true if File.exist?(git_path) and File.directory?(git_path)
+  return false if dir == '/'
+  in_git_repo(File.expand_path('..',dir))
 end
 
 SUB_COMMANDS = %w{help version build watch package clean create clone}
@@ -41,18 +50,18 @@ Trollop::options do
   version AsciiBinder::VERSION
   banner <<-EOF
 Usage:
-  #$0 <command> <repo_dir>
+  #$0 <command> <docs_basedir>
 
 Commands:
   build (default action)
-    Builds the HTML docs in the indicated repo dir
+    Builds the HTML docs within the indicated docs base directory
   create
     Generates a new AsciiBinder repo at the indicated dir
   clone
     Clones an existing AsciiBinder repo to the local filesystem
   watch
     Starts Guard, which automatically regenerates changed HTML
-    files on the working branch in the repo dir
+    files on the working branch in the docs base directory dir
   package
     Builds and packages the static HTML for all of the sites
     defined in the _distro_config.yml file
@@ -66,13 +75,13 @@ EOF
 end
 
 cmd = ARGV.shift
-repo_dir = nil
+docs_basedir = nil
 
 if cmd.nil?
   cmd = "build"
 elsif !SUB_COMMANDS.include?(cmd)
   if ARGV.empty?
-    repo_dir = Pathname.new(cmd)
+    docs_basedir = Pathname.new(cmd)
     cmd = "build"
   else
     Trollop::die "'#{cmd}' is not a valid asciibinder subcommand. Legal values are '#{SUB_COMMANDS.join('\', \'')}'."
@@ -84,13 +93,13 @@ cmd_opts = case cmd
     Trollop::options do
       banner <<-EOF
 Usage:
-  #$0 build <options> <repo_dir>
+  #$0 build <options> <docs_basedir>
 
 Description:
   This is the default behavior for the asciibinder utility. When run,
   AsciiBinder reads the _distro_config.yml file out of the working
-  branch of the indicated repo directory and based on that, proceeds to
-  build the working branch version of the documentation for each distro.
+  branch of the indicated docs base directory and based on that, proceeds
+  to build the working branch version of the documentation for each distro.
 
   If you use the --all_branches flag, AsciiBinder behaves as described
   above, and then once the working branch version is built, AsciiBinder
@@ -128,7 +137,7 @@ EOF
     Trollop::options do
       banner <<-EOF
 Usage:
-  #$0 create <new_repo_dir>
+  #$0 create <new_docs_basedir>
 
 Description:
   Creates a new, bare AsciiBinder repo in the specified directory.
@@ -155,11 +164,11 @@ EOF
     Trollop::options do
       banner <<-EOF
 Usage:
-  #$0 watch <repo_dir>
+  #$0 watch <docs_basedir>
 
 Description:
   In watch mode, AsciiBinder starts a Guard process in the foreground.
-  This process watches the repo_dir for changes to the AsciiDoc (.adoc)
+  This process watches the docs_basedir for changes to the AsciiDoc (.adoc)
   files. When a change occurs, AsciiBinder regenerates the specific
   HTML output of the file that was changed, for the working branch only.
 
@@ -181,7 +190,7 @@ EOF
     Trollop::options do
       banner <<-EOF
 Usage:
-  #$0 package <options> <repo_dir>
+  #$0 package <options> <docs_basedir>
 
 Description:
   Publish mode is similar to 'build' mode, but once all of the branches' of
@@ -201,26 +210,26 @@ EOF
     exit 0
   end
 
-if (not repo_dir.nil? and not ARGV.empty?) or (repo_dir.nil? and ARGV.length > 1)
+if (not docs_basedir.nil? and not ARGV.empty?) or (docs_basedir.nil? and ARGV.length > 1)
   Trollop::die "Too many arguments provided to ascii_binder: '#{ARGV.join(' ')}'. Exiting."
-elsif repo_dir.nil?
+elsif docs_basedir.nil?
   if ARGV.length == 1
     if cmd == 'clone'
       cmd_opts[:giturl] = ARGV.shift
       if cmd_opts[:dir] != ''
-        repo_dir = Pathname.new(cmd_opts[:dir])
+        docs_basedir = Pathname.new(cmd_opts[:dir])
       else
-        repo_dir = Pathname.new(File.join(Pathname.pwd, cmd_opts[:giturl].split('/')[-1].split('.')[0]))
+        docs_basedir = Pathname.new(File.join(Pathname.pwd, cmd_opts[:giturl].split('/')[-1].split('.')[0]))
       end
     else
-      repo_dir = Pathname.new(ARGV.shift)
+      docs_basedir = Pathname.new(ARGV.shift)
     end
   else
     if cmd != 'create'
       if cmd == 'clone'
         Trollop::die "Provide a git URL to clone from."
       else
-        repo_dir = Pathname.pwd
+        docs_basedir = Pathname.pwd
       end
     else
       Trollop::die "Specify a name for the new repo directory."
@@ -228,39 +237,39 @@ elsif repo_dir.nil?
   end
 end
 
-# Validate the repo_dir path
+# Validate the docs_basedir path
 if cmd == 'create' or cmd == 'clone'
-  if repo_dir.exist?
-    Trollop::die "The specified new repo directory '#{repo_dir}' already exists."
+  if docs_basedir.exist?
+    Trollop::die "The specified new repo directory '#{docs_basedir}' already exists."
   end
 else
-  if !repo_dir.exist?
-    Trollop::die "The specified repo directory '#{repo_dir}' does not exist."
-  elsif !repo_dir.directory?
-    Trollop::die "The specified repo directory path '#{repo_dir}' is not a directory."
-  elsif !repo_dir.readable?
-    Trollop::die "The specified repo directory '#{repo_dir}' is not readable."
-  elsif !repo_dir.writable?
-    Trollop::die "The specified repo directory '#{repo_dir}' cannot be written to."
+  if !docs_basedir.exist?
+    Trollop::die "The specified docs directory '#{docs_basedir}' does not exist."
+  elsif !docs_basedir.directory?
+    Trollop::die "The specified docs directory path '#{docs_basedir}' is not a directory."
+  elsif !docs_basedir.readable?
+    Trollop::die "The specified docs directory '#{docs_basedir}' is not readable."
+  elsif !docs_basedir.writable?
+    Trollop::die "The specified docs directory '#{docs_basedir}' cannot be written to."
   else
-    repo_check(repo_dir)
+    repo_check(docs_basedir)
   end
 end
 
 # Set the repo root
-set_source_dir(File.expand_path(repo_dir))
+set_docs_root_dir(File.expand_path(docs_basedir))
 
 # Cloning? Time to try it.
 if cmd == 'clone'
-  puts "Cloning #{cmd_opts[:giturl]} to #{repo_dir}"
-  system("git clone #{cmd_opts[:giturl]} #{repo_dir}")
+  puts "Cloning #{cmd_opts[:giturl]} to #{docs_basedir}"
+  system("git clone #{cmd_opts[:giturl]} #{docs_basedir}")
   Trollop::die "The git URL could not be cloned: #{err}" if $?.exitstatus != 0
 
   # Make sure this cloned repo is legit.
-  repo_check(repo_dir)
+  repo_check(docs_basedir)
 
   if cmd_opts[:branches]
-    Dir.chdir(repo_dir)
+    Dir.chdir(docs_basedir)
     puts "Tracking branch setup:"
     distro_branches.each do |doc_branch|
       next if doc_branch == 'master'
@@ -279,7 +288,7 @@ end
 # Change to the repo dir. This is necessary in order for
 # AsciiDoctor to work properly.
 if cmd != 'create'
-  Dir.chdir source_dir
+  Dir.chdir docs_basedir
 end
 
 # Do the things with the stuff
@@ -304,10 +313,10 @@ when "watch"
   end
 when "clean"
   clean_up
-  puts "Cleaned up #{repo_dir}."
+  puts "Cleaned up #{docs_basedir}."
 when "create"
   create_new_repo
-  puts "Created new repo in #{repo_dir}."
+  puts "Created new repo in #{docs_basedir}."
 end
 
 exit

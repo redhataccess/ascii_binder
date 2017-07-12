@@ -36,21 +36,21 @@ module Helpers
   end
 
   def distro_map
-    @distro_map ||= YAML.load_file(File.join(working_dir,'_distro_map.yml'))
+    @distro_map ||= YAML.load_file(File.join(docs_root,'_distro_map.yml'))
   end
 
   def topic_map
     # Normally we want to read the topic map from each branch. In our test setup,
     # each branch has an identical topic map, so we can get away with this for now.
-    @topic_map ||= YAML.load_stream(open(File.join(working_dir,'_topic_map.yml')))
+    @topic_map ||= YAML.load_stream(open(File.join(docs_root,'_topic_map.yml')))
   end
 
   def preview_dir
-    @preview_dir ||= File.join(working_dir,'_preview')
+    @preview_dir ||= File.join(docs_root,'_preview')
   end
 
   def package_dir
-    @package_dir ||= File.join(working_dir,'_package')
+    @package_dir ||= File.join(docs_root,'_package')
   end
 
   def repo_template_dir
@@ -253,13 +253,29 @@ module Helpers
     @initial_working_branch ||= nil
   end
 
-  def initialize_test_repo(valid,multiple_distros=false)
+  def using_offset_docs_root?
+    @using_offset_docs_root
+  end
+
+  def docs_root
+    using_offset_docs_root? ? File.join(working_dir,'docs') : working_dir
+  end
+
+  def initialize_test_repo(valid,multiple_distros=false,offset_docs_root=false)
     unless valid
       FileUtils.mkdir(working_dir)
     else
       status_check(run_command('create'),'Could not initialize test repo.')
       if multiple_distros
         FileUtils.cp_r(File.join(test_distro_dir,'.'),working_dir)
+      end
+      if offset_docs_root
+        @using_offset_docs_root = true
+        entries = Dir.entries(working_dir).select{ |item| not item.start_with?('.') }
+        system("cd #{working_dir} && mkdir docs")
+        entries.each do |entry|
+          system("cd #{working_dir} && mv #{entry} docs")
+        end
       end
       system("cd #{working_dir} && git add . > /dev/null && git commit -am 'test commit' > /dev/null")
       if multiple_distros
@@ -272,7 +288,7 @@ module Helpers
 
   def invalidate_distro_map
       invalid_map = File.join(gem_root,'features','support','_invalid_distro_map.yml')
-      FileUtils.cp(invalid_map,File.join(working_dir,'_distro_map.yml'))
+      FileUtils.cp(invalid_map,File.join(docs_root,'_distro_map.yml'))
       system("cd #{working_dir} && git add . > /dev/null && git commit -am 'Commit invalid distro map' > /dev/null")
   end
 
@@ -431,7 +447,7 @@ module Helpers
       next unless target_site == '' or site == target_site
 
       # Finally, confirm that the expected site index page was copied to the site home directory.
-      source_page = File.join(working_dir,"index-#{site}.html")
+      source_page = File.join(docs_root,"index-#{site}.html")
       target_page = File.join(package_dir,site,'index.html')
       unless FileUtils.compare_file(source_page,target_page)
         puts "ERROR: Incorrect site index file contents at '#{target_page}'; expected contents of '#{source_page}'."

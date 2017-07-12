@@ -44,7 +44,7 @@ module AsciiBinder
     end
 
     def source_path
-      @source_path ||= File.join(source_dir,repo_path)
+      @source_path ||= File.join(docs_root_dir,repo_path)
     end
 
     def preview_path(distro_key,branch_dir)

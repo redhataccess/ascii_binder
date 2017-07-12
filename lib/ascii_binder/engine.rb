@@ -43,7 +43,7 @@ module AsciiBinder
     end
 
     def git
-      @git ||= Git.open(source_dir)
+      @git ||= Git.open(git_root_dir)
     end
 
     def git_checkout branch_name
@@ -55,17 +55,17 @@ module AsciiBinder
 
     def git_stash_all
       # See if there are any changes in need of stashing
-      @stash_needed = `cd #{source_dir} && git status --porcelain` !~ /^\s*$/
+      @stash_needed = `cd #{git_root_dir} && git status --porcelain` !~ /^\s*$/
       if @stash_needed
         puts "\nNOTICE: Stashing uncommited changes and files in working branch."
-        `cd #{source_dir} && git stash -u`
+        `cd #{docs_root_dir} && git stash -u`
       end
     end
 
     def git_apply_and_drop
       return unless @stash_needed
       puts "\nNOTE: Re-applying uncommitted changes and files to working branch."
-      if system("cd #{source_dir} && git stash pop")
+      if system("cd #{docs_root_dir} && git stash pop")
         puts "NOTE: Stash application successful."
       else
         puts "ERROR: Could not apply stashed code. Run `git stash apply` manually."
@@ -97,13 +97,13 @@ module AsciiBinder
     # Protip: Don't cache these! The topic map needs to be reread every time we change branches.
     def topic_map_file
       topic_file = TOPIC_MAP_FILENAME
-      unless File.exist?(File.join(source_dir,topic_file))
+      unless File.exist?(File.join(docs_root_dir,topic_file))
         # The new filename '_topic_map.yml' couldn't be found;
         # switch to the old one and warn the user.
         topic_file = BUILD_FILENAME
-        unless File.exist?(File.join(source_dir,topic_file))
+        unless File.exist?(File.join(docs_root_dir,topic_file))
           # Critical error - no topic map file at all.
-          Trollop::die "Could not find any topic map file ('#{TOPIC_MAP_FILENAME}' or '#{BUILD_FILENAME}') at #{source_dir} in branch '#{git.branch}'"
+          Trollop::die "Could not find any topic map file ('#{TOPIC_MAP_FILENAME}' or '#{BUILD_FILENAME}') at #{docs_root_dir} in branch '#{git.branch}'"
         end
         warning "'#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'."
       end
@@ -123,13 +123,13 @@ module AsciiBinder
       gem_template_dir = File.join(gem_root_dir,"templates")
 
       # Create the new repo dir
-      FileUtils.mkdir_p(source_dir)
+      FileUtils.mkdir_p(docs_root_dir)
 
       # Copy the basic repo content into the new repo dir
       Find.find(gem_template_dir).each do |path|
         next if path == gem_template_dir
         src_path = Pathname.new(path)
-        tgt_path = src_path.sub(gem_template_dir,source_dir)
+        tgt_path = src_path.sub(gem_template_dir,docs_root_dir)
         if src_path.directory?
           FileUtils.mkdir_p(tgt_path.to_s)
         else
@@ -138,16 +138,16 @@ module AsciiBinder
       end
 
       # Initialize the git repo
-      Git.init(source_dir)
+      Git.init(docs_root_dir)
     end
 
     def find_topic_files
       file_list = []
-      Find.find(source_dir).each do |path|
+      Find.find(docs_root_dir).each do |path|
         # Only consider .adoc files and ignore README, and anything in
         # directories whose names begin with 'old' or '_' (underscore)
         next if path.nil? or not path =~ /.*\.adoc/ or path =~ /README/ or path =~ /\/old\// or path =~ /\/_/
-        src_path = Pathname.new(path).sub(source_dir,'').to_s
+        src_path = Pathname.new(path).sub(docs_root_dir,'').to_s
         next if src_path.split('/').length < 3
         file_list << src_path
       end
@@ -172,7 +172,7 @@ module AsciiBinder
 
     def distro_map
       @distro_map ||= begin
-        distro_map_file = File.join(source_dir, DISTRO_MAP_FILENAME)
+        distro_map_file = File.join(docs_root_dir, DISTRO_MAP_FILENAME)
         distro_map = AsciiBinder::DistroMap.new(distro_map_file)
         unless distro_map.is_valid?
           errors = distro_map.errors
@@ -211,7 +211,7 @@ module AsciiBinder
         args[:subtopic_shim]             = '../'
       end
 
-      template_path = File.expand_path("#{source_dir}/_templates/page.html.erb")
+      template_path = File.expand_path("#{docs_root_dir}/_templates/page.html.erb")
       template_renderer.render(template_path, args)
     end
 
@@ -321,7 +321,7 @@ module AsciiBinder
         end
 
         # Note the image files checked in to this branch.
-        branch_image_files = Find.find(source_dir).select{ |path| not path.nil? and (path =~ /.*\.png$/ or path =~ /.*\.png\.cache$/) }
+        branch_image_files = Find.find(docs_root_dir).select{ |path| not path.nil? and (path =~ /.*\.png$/ or path =~ /.*\.png\.cache$/) }
 
         first_branch = single_page.nil?
 
@@ -399,7 +399,7 @@ module AsciiBinder
         end
 
         # Remove DITAA-generated images
-        ditaa_image_files = Find.find(source_dir).select{ |path| not path.nil? and not (path =~ /_preview/ or path =~ /_package/) and (path =~ /.*\.png$/ or path =~ /.*\.png\.cache$/) and not branch_image_files.include?(path) }
+        ditaa_image_files = Find.find(docs_root_dir).select{ |path| not path.nil? and not (path =~ /_preview/ or path =~ /_package/) and (path =~ /.*\.png$/ or path =~ /.*\.png\.cache$/) and not branch_image_files.include?(path) }
         if not ditaa_image_files.empty?
           puts "\nRemoving ditaa-generated files from repo before changing branches."
           ditaa_image_files.each do |dfile|
@@ -541,7 +541,7 @@ module AsciiBinder
             #     * index-commercial.html would end up as #{site_root}/index.html
             #     * search-commercial.html would end up as #{site_root}/search.html
             #     * index-community.html would be ignored
-            site_files = Dir.glob(File.join(source_dir, '*-' + site.id + '.html'))
+            site_files = Dir.glob(File.join(docs_root_dir, '*-' + site.id + '.html'))
             unless site_files.empty?
               site_files.each do |fpath|
                 target_basename = File.basename(fpath).gsub(/-#{site.id}\.html$/, '.html')
@@ -551,7 +551,7 @@ module AsciiBinder
               FileUtils.cp(File.join(preview_dir,distro_id,'index.html'),File.join(package_dir,site.id,'index.html'))
             end
             ['_images','_stylesheets'].each do |support_dir|
-              FileUtils.cp_r(File.join(source_dir,support_dir),File.join(package_dir,site.id,support_dir))
+              FileUtils.cp_r(File.join(docs_root_dir,support_dir),File.join(package_dir,site.id,support_dir))
             end
 
             # Now build a sitemap
@@ -573,7 +573,7 @@ module AsciiBinder
     end
 
     def clean_up
-      if not system("rm -rf #{source_dir}/_preview/* #{source_dir}/_package/*")
+      if not system("rm -rf #{docs_root_dir}/_preview/* #{docs_root_dir}/_package/*")
         puts "Nothing to clean."
       end
     end

@@ -23,8 +23,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "diff_dirs", "~> 0.1.2"
   spec.add_dependency "rake", "~> 10.0"
 
-  spec.add_dependency 'asciidoctor', '~> 1.5.4'
-  spec.add_dependency 'asciidoctor-diagram'
+  spec.add_dependency 'asciidoctor', '~> 1.5.6'
+  spec.add_dependency 'asciidoctor-diagram', '~> 1.5.5'
   spec.add_dependency 'git'
   spec.add_dependency 'guard'
   spec.add_dependency 'guard-shell'
