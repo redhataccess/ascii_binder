@@ -13,8 +13,15 @@ Given(/^a nonexistant repo directory$/) do
 end
 
 Given(/^a valid AsciiBinder docs repo(.*)$/) do |repo_condition|
-  multiple_distros = repo_condition == ' with multiple distros'
-  initialize_test_repo(true,multiple_distros)
+  multiple_distros = false
+  offset_docs_root = false
+  if repo_condition == ' with multiple distros'
+    multiple_distros = true
+  elsif repo_condition == ' where the docs root is not at the repo root'
+    multiple_distros = true
+    offset_docs_root = true
+  end
+  initialize_test_repo(true,multiple_distros,offset_docs_root)
 end
 
 Given(/^an invalid AsciiBinder docs repo(.*)$/) do |invalid_condition|
@@ -62,13 +69,14 @@ Given(/^an existing remote repo$/) do
   @remote_repo_url = "file://#{@remote_repo_dir}"
 end
 
-When(/^the user runs `asciibinder (.+)` on that repo directory$/) do |command_string|
+When(/^the user runs `asciibinder (.+)` on that (.+) directory$/) do |command_string,target_dir|
   @command_args = command_string.split(' ')
+  run_dir = target_dir == 'docs root' ? File.join(working_dir,'docs') : working_dir
   command = @command_args.shift
   if command == 'clone'
     @step_output = run_command(command,["-d #{working_dir}"],@remote_repo_url)
   else
-    @step_output = run_command(command,@command_args)
+    @step_output = run_command(command,@command_args,run_dir)
   end
 end
 

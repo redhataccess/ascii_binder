@@ -8,7 +8,6 @@ Feature: asciibinder build
     When the user runs `asciibinder build` on that repo directory
     Then the program exits with a warning
 
-
   Scenario: A user wants to build all distros against the current repo branch
     Given a valid AsciiBinder docs repo with multiple distros
     When the user runs `asciibinder build` on that repo directory
@@ -28,3 +27,8 @@ Feature: asciibinder build
     Given a valid AsciiBinder docs repo with multiple distros
     When the user runs `asciibinder build --page=welcome:index` on that repo directory
     Then the program generates preview content for the specified page in all distros
+
+  Scenario: A user wants to build from a repo where the docs root is not the repo root
+    Given a valid AsciiBinder docs repo where the docs root is not at the repo root
+    When the user runs `asciibinder build` on that docs root directory
+    Then the program generates preview content for all distros in the current branch
