@@ -451,7 +451,8 @@ module AsciiBinder
         branch_config.distro.id,
         "product-title=#{branch_config.distro_name}",
         "product-version=#{branch_config.name}",
-        "product-author=#{branch_config.distro_author}"
+        "product-author=#{branch_config.distro_author}",
+        "repo_path=#{topic.repo_path}"
       ])
 
       doc = Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
@@ -502,6 +503,7 @@ module AsciiBinder
         :images_path      => "../../#{dir_depth}#{branch_config.dir}/#{IMAGE_DIRNAME}/",
         :site_home_path   => "../../#{dir_depth}index.html",
         :template_path    => template_dir,
+        :repo_path        => topic.repo_path,
       }
       full_file_text = page(page_args)
       File.write(preview_path,full_file_text)
