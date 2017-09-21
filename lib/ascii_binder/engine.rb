@@ -3,6 +3,7 @@ require 'ascii_binder/distro_map'
 require 'ascii_binder/helpers'
 require 'ascii_binder/site_map'
 require 'ascii_binder/template_renderer'
+require 'ascii_binder/topic_alias'
 require 'ascii_binder/topic_map'
 require 'asciidoctor'
 require 'asciidoctor/cli'
@@ -507,6 +508,15 @@ module AsciiBinder
       }
       full_file_text = page(page_args)
       File.write(preview_path,full_file_text)
+
+      if doc.attributes.has_key?('asciibinder-aliases')
+        aliases = doc.attributes['asciibinder-aliases'].split(',')
+        aliases.each do |url|
+          ta = AsciiBinder::TopicAlias.new(preview_dir,distro.id,branch_config.dir,topic.absolute_url(branch_config.dir),url.strip)
+          FileUtils.mkdir_p(ta.preview_path)
+          File.write(ta.filepath,ta.file_text)
+        end
+      end
     end
 
     # package_docs

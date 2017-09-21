@@ -4,6 +4,8 @@ Dir: welcome
 Topics:
   - Name: Welcome
     File: index
+  - Name: Aliased Topic
+    File: aliased
   - Name: Subtopics
     Dir: subtopics
     Topics:

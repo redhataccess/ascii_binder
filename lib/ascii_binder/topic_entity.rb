@@ -55,6 +55,10 @@ module AsciiBinder
       File.join(package_dir,site_id,branch_dir,repo_path_html)
     end
 
+    def absolute_url(branch_dir)
+      File.join('/',branch_dir,repo_path_html)
+    end
+
     def group_filepaths
       @group_filepaths ||= begin
         group_filepaths = []
