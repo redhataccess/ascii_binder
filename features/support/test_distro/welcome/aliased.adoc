@@ -2,7 +2,6 @@
 {product-author}
 {product-version}
 :data-uri:
-:asciibinder-aliases: foo,bar/baz
 :icons:
 
 This topic exercises topic _aliasing_, which enables authors to manage page redirects without having to fiddle with web server settings.

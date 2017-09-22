@@ -41,9 +41,9 @@ Topics:
 Name: ALIASES_GROUP
 Dir: aliases
 Topics:
-  - Name: Alias to Aliased
+  - Name: Alias to Nonexistant
     File: a_to_a
-    Alias: welcome/aliased
+    Alias: welcome/nonexistent
   - Name: Alias to External
     File: a_to_e
     Alias: https://redhat.com/

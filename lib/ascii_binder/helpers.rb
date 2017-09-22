@@ -10,6 +10,7 @@ module AsciiBinder
     IMAGE_DIRNAME       = '_images'
     BLANK_STRING_RE     = Regexp.new('^\s*$')
     ID_STRING_RE        = Regexp.new('^[A-Za-z0-9\-\_]+$')
+    URL_STRING_RE       = Regexp.new('^https?:\/\/[\S]+$')
 
     def valid_id?(check_id)
       return false unless check_id.is_a?(String)
@@ -21,6 +22,12 @@ module AsciiBinder
       return false unless check_string.is_a?(String)
       return false unless check_string.length > 0
       return false if check_string.match BLANK_STRING_RE
+      return true
+    end
+
+    def valid_url?(check_string)
+      return false unless valid_string?(check_string)
+      return false unless check_string.match URL_STRING_RE
       return true
     end
 
@@ -82,6 +89,10 @@ module AsciiBinder
 
     def image_dir
       @image_dir ||= File.join(docs_root_dir,IMAGE_DIRNAME)
+    end
+
+    def alias_text(target)
+      "<!DOCTYPE html><html><head><title>#{target}</title><link rel=\"canonical\" href=\"#{target}\"/><meta name=\"robots\" content=\"noindex\"><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" /><meta http-equiv=\"refresh\" content=\"0; url=#{target}\" /></head></html>"
     end
   end
 end

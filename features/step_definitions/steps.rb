@@ -15,13 +15,20 @@ end
 Given(/^a valid AsciiBinder docs repo(.*)$/) do |repo_condition|
   multiple_distros = false
   offset_docs_root = false
+  invalid_alias    = false
   if repo_condition == ' with multiple distros'
     multiple_distros = true
   elsif repo_condition == ' where the docs root is not at the repo root'
     multiple_distros = true
     offset_docs_root = true
+  elsif repo_condition == ' with an invalid alias'
+    multiple_distros = true
+    invalid_alias    = true
   end
   initialize_test_repo(true,multiple_distros,offset_docs_root)
+  if invalid_alias
+    invalidate_topic_map
+  end
 end
 
 Given(/^an invalid AsciiBinder docs repo(.*)$/) do |invalid_condition|

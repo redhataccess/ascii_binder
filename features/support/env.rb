@@ -46,7 +46,7 @@ module Helpers
   end
 
   def alias_files
-    @alias_files ||= ['foo.html','bar/baz.html']
+    @alias_files ||= ['aliases/a_to_a.html','aliases/a_to_e.html']
   end
 
   def preview_dir
@@ -312,6 +312,12 @@ module Helpers
       system("cd #{working_dir} && git add . > /dev/null && git commit -am 'Commit invalid distro map' > /dev/null")
   end
 
+  def invalidate_topic_map
+      invalid_map = File.join(gem_root,'features','support','_invalid_alias_topic_map.yml')
+      FileUtils.cp(invalid_map,File.join(docs_root,'_topic_map.yml'))
+      system("cd #{working_dir} && git add . > /dev/null && git commit -am 'Commit invalid alias topic map' > /dev/null")
+  end
+
   def initialize_remote_repo
     remote_dir = Dir.mktmpdir('ascii_binder-cucumber-remote')
     FileUtils.rm_rf(remote_dir)
@@ -442,7 +448,6 @@ module Helpers
               puts "ERROR: Alias file '#{afile}' found more than once in generated output: #{genmatches.inspect}"
               exit 1
             end
-            gen_paths_map[distro][branch].delete(genmatches[0])
           end
           if not gen_paths_map[distro][branch] == all_paths_map[distro][branch]
             explanation = files_diff_explanation(gen_paths_map[distro][branch],all_paths_map[distro][branch])
@@ -477,7 +482,6 @@ module Helpers
                 puts "ERROR: Alias file '#{afile}' found more than once in generated site output: #{genmatches.inspect}"
                 exit 1
               end
-              real_site_map[site][distro][branch].delete(genmatches[0])
             end
           end
           # Confirm that what was generated matches what was expected.

@@ -27,6 +27,10 @@ module AsciiBinder
       @branch_path ||= File.join(preview_dir,@distro.id,@dir)
     end
 
+    def branch_url_base
+      @branch_url_base ||= File.join('/',@dir)
+    end
+
     def branch_stylesheet_dir
       @branch_stylesheet_dir ||= File.join(branch_path,STYLESHEET_DIRNAME)
     end
