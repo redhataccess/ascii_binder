@@ -37,7 +37,11 @@ module AsciiBinder
         if is_group?
           this_step = dir
         elsif is_topic?
-          this_step = file.end_with?('.adoc') ? file : "#{file}.adoc"
+          if File.extname(file) == '.adoc' or File.extname(file) == '.md'
+            this_step = file
+          else
+            this_step = "#{file}.adoc"
+          end
         end
         @dir_path == '' ? this_step : File.join(@dir_path,this_step)
       end
@@ -48,7 +52,15 @@ module AsciiBinder
     end
 
     def repo_path_html
-      @repo_path_html ||= is_topic? ? File.join(File.dirname(repo_path),File.basename(repo_path,'.adoc')) + ".html" : repo_path
+      if is_topic?
+        if File.extname(repo_path) == '.adoc'
+          @repo_path_html = File.join(File.dirname(repo_path),File.basename(repo_path, '.adoc')) + ".html"
+        else
+          @repo_path_html = File.join(File.dirname(repo_path),File.basename(repo_path, '.md')) + ".html"
+        end
+      else
+        @repo_path_html = repo_path
+      end
     end
 
     def source_path
@@ -75,6 +87,22 @@ module AsciiBinder
           group_filepaths.uniq!
         end
         group_filepaths
+      end
+    end
+
+    def group_dirpaths
+      @group_dirpaths ||= begin
+        group_dirpaths = []
+        if is_group?
+          #group_dirpaths << File.join(File.dirname(repo_path),File.basename(repo_path,'.adoc'))
+          group_dirpaths << repo_path
+        else
+          subitems.each do |subitem|
+            group_dirpaths.concat(subitem.group_filepaths)
+          end
+          group_dirpaths.uniq!
+        end
+        group_dirpaths
       end
     end
 

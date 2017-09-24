@@ -1,5 +1,5 @@
 guard 'shell' do
-  watch(/^.*\.adoc$/) { |m|
+  watch(/^.*\.(adoc|md)$/) { |m|
     if not m[0].start_with?('_preview') and not m[0].start_with?('_package')
       full_path      = m[0].split('/')
       src_group_path = full_path.length == 1 ? '' : full_path[0..-2].join('/')

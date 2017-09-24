@@ -25,5 +25,6 @@ Name: AsciiBinder Doc Project
 Dir: welcome
 Topics:
   - Name: Welcome
-    File: index
-
+    File: index.adoc
+  - Name: Markdown Information
+    File: markdown.md

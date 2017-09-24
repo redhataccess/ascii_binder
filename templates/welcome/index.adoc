@@ -6,6 +6,8 @@
 
 Welcome to the AsciiBinder Docs Management System. This welcome page is provided as a template for the topic pages that you will create for your software project.
 
+AsciiBinder can process both AsciiDoc and link:markdown.html[Markdown] files in the same repository
+
 == Need Help?
 * Check out the http://www.asciibinder.org/latest/welcome/[AsciiBinder documentation]
 * Join our http://groups.google.com/group/asciibinder[mailing list]

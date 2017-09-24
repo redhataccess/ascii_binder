@@ -10,6 +10,8 @@ require 'asciidoctor-diagram'
 require 'fileutils'
 require 'find'
 require 'git'
+require 'kramdown'
+require 'logger'
 require 'pandoc-ruby'
 require 'pathname'
 require 'sitemap_generator'
@@ -127,9 +129,9 @@ module AsciiBinder
     def find_topic_files
       file_list = []
       Find.find(docs_root_dir).each do |path|
-        # Only consider .adoc files and ignore README, and anything in
+        # Only consider .adoc and .md files and ignore README, and anything in
         # directories whose names begin with 'old' or '_' (underscore)
-        next if path.nil? or not path =~ /.*\.adoc/ or path =~ /README/ or path =~ /\/old\// or path =~ /\/_/
+        next if path.nil? or not (path =~ /.*\.adoc/ or path =~ /.*\.md/) or path =~ /README/ or path =~ /\/old\// or path =~ /\/_/
         src_path = Pathname.new(path).sub(docs_root_dir,'').to_s
         next if src_path.split('/').length < 3
         file_list << src_path
@@ -315,7 +317,7 @@ module AsciiBinder
         end
 
         # The branch_orphan_files list starts with the set of all
-        # .adoc files found in the repo, and will be whittled
+        # topic files found in the repo, and will be whittled
         # down from there.
         branch_orphan_files = find_topic_files
         branch_topic_map    = topic_map
@@ -452,7 +454,7 @@ module AsciiBinder
 
     def configure_and_generate_page(topic,branch_config,navigation)
       distro = branch_config.distro
-      topic_adoc = File.open(topic.source_path,'r').read
+      topic_content = File.open(topic.source_path,'r').read
 
       page_attrs = asciidoctor_page_attrs([
         "imagesdir=#{File.join(topic.parent.source_path,'images')}",
@@ -463,10 +465,15 @@ module AsciiBinder
         "repo_path=#{topic.repo_path}"
       ])
 
-      doc = without_warnings { Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs }
-      article_title = doc.doctitle || topic.name
+      if File.extname(topic.source_path) == '.md'
+        topic_html = without_warnings { Kramdown::Document.new(topic_content).to_html } # add back options see below
+        article_title = "" # There is no article title pass into markdown templates
+      else
+        doc = without_warnings { Asciidoctor.load topic_content, :header_footer => false, :safe => :unsafe, :attributes => page_attrs }
+        article_title = doc.doctitle || topic.name
+        topic_html = doc.render
+      end
 
-      topic_html = doc.render
       dir_depth  = ''
       if branch_config.dir.split('/').length > 1
         dir_depth = '../' * (branch_config.dir.split('/').length - 1)
@@ -537,6 +544,14 @@ module AsciiBinder
             next if not File.directory?(src_dir)
             FileUtils.mkdir_p(tgt_dir)
             FileUtils.cp_r(src_dir,tgt_dir)
+            # Copy over image directories - needed for non adoc/data-uri formats
+            topic_map.dirpaths.each do |group_dir|
+              image_dir = File.join(docs_root_dir,group_dir, "images")
+              image_dir_tgt = File.join(package_dir,site.id,branch.dir,group_dir)
+              if File.directory?(image_dir)
+                FileUtils.cp_r(image_dir,image_dir_tgt)
+              end
+            end
           end
           site_dir = File.join(package_dir,site.id)
           if File.directory?(site_dir)

@@ -18,6 +18,16 @@ module AsciiBinder
       end
     end
 
+    def dirpaths
+      @dirpaths ||= begin
+        dirpaths = []
+        @list.each do |topic_entity|
+          dirpaths.concat(topic_entity.group_dirpaths)
+        end
+        dirpaths
+      end
+    end
+
     def filepaths
       @filepaths ||= begin
         filepaths = []
