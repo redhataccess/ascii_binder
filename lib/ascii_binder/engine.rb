@@ -435,7 +435,11 @@ module AsciiBinder
           process_topic_entity_list(branch_config,single_page_path,navigation,topic_entity.subitems,preview_path)
         elsif topic_entity.is_topic?
           if single_page_path.length == 0
-            puts "  - #{topic_entity.repo_path}"
+            if File.exists?(topic_entity.source_path)
+              puts "  - #{topic_entity.repo_path}"
+            else
+              puts "  - #{topic_entity.repo_path} <-- Skipping non-existent file"
+            end
           end
           configure_and_generate_page(topic_entity,branch_config,navigation)
         end
@@ -443,6 +447,7 @@ module AsciiBinder
     end
 
     def configure_and_generate_page(topic,branch_config,navigation)
+      return if not File.exist?(topic.source_path)
       distro = branch_config.distro
       topic_adoc = File.open(topic.source_path,'r').read
 
