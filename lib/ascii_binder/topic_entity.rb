@@ -176,7 +176,7 @@ module AsciiBinder
       distro_keys.each do |distro_key|
         next if @actual_distro_keys.include?(distro_key)
         if verbose
-          errors << "#{entity_id} 'Distros' filter includes nonexistant distro key '#{distro_key}'"
+          errors << "#{entity_id} 'Distros' filter includes nonexistent distro key '#{distro_key}'"
         else
           return false
         end
