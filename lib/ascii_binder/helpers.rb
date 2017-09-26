@@ -1,3 +1,6 @@
+require 'logger'
+require 'stringio'
+
 module AsciiBinder
   module Helpers
     BUILD_FILENAME      = '_build_cfg.yml'
@@ -49,6 +52,72 @@ module AsciiBinder
 
     def docs_root_dir
       AsciiBinder::DOCS_ROOT_DIR
+    end
+
+    def set_log_level(user_log_level)
+      AsciiBinder.const_set("LOG_LEVEL", log_levels[user_log_level])
+    end
+
+    def log_levels
+      @log_levels ||= {
+        :debug => Logger::DEBUG.to_i,
+        :error => Logger::ERROR.to_i,
+        :fatal => Logger::FATAL.to_i,
+        :info  => Logger::INFO.to_i,
+        :warn  => Logger::WARN.to_i,
+      }
+    end
+
+    def logerr
+      @logerr ||= begin
+        logger = Logger.new(STDERR, level: AsciiBinder::LOG_LEVEL)
+        logger.formatter = proc do |severity, datetime, progname, msg|
+          "#{severity}: #{msg}\n"
+        end
+        logger
+      end
+    end
+
+    def logstd
+      @logstd ||= begin
+        logger = Logger.new(STDOUT, level: AsciiBinder::LOG_LEVEL)
+        logger.formatter = proc do |severity, datetime, progname, msg|
+          severity == 'ANY' ? "#{msg}\n" : "#{severity}: #{msg}\n"
+        end
+        logger
+      end
+    end
+
+    def log_info(text)
+      logstd.info(text)
+    end
+
+    def log_warn(text)
+      logstd.warn(text)
+    end
+
+    def log_error(text)
+      logerr.error(text)
+    end
+
+    def log_fatal(text)
+      logerr.fatal(text)
+    end
+
+    def log_debug(text)
+      logstd.debug(text)
+    end
+
+    def log_unknown(text)
+      logstd.unknown(text)
+    end
+
+    def without_warnings
+      verboseness_level = $VERBOSE
+      $VERBOSE = nil
+      yield
+    ensure
+      $VERBOSE = verboseness_level
     end
 
     def template_renderer

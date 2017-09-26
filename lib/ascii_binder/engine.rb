@@ -10,7 +10,6 @@ require 'asciidoctor-diagram'
 require 'fileutils'
 require 'find'
 require 'git'
-require 'logger'
 require 'pandoc-ruby'
 require 'pathname'
 require 'sitemap_generator'
@@ -24,22 +23,6 @@ module AsciiBinder
 
     def build_date
       Time.now.utc
-    end
-
-    def notice(hey,message,newline = false)
-      # TODO: (maybe) redirect everything to stderr
-      if newline
-        puts "\n"
-      end
-      puts "#{hey}: #{message}"
-    end
-
-    def warning(message,newline = false)
-      notice("WARNING",message,newline)
-    end
-
-    def nl_warning(message)
-      warning(message,true)
     end
 
     def git
@@ -57,18 +40,18 @@ module AsciiBinder
       # See if there are any changes in need of stashing
       @stash_needed = `cd #{git_root_dir} && git status --porcelain` !~ /^\s*$/
       if @stash_needed
-        puts "\nNOTICE: Stashing uncommited changes and files in working branch."
+        log_unknown("Stashing uncommited changes and files in working branch.")
         `cd #{docs_root_dir} && git stash -u`
       end
     end
 
     def git_apply_and_drop
       return unless @stash_needed
-      puts "\nNOTE: Re-applying uncommitted changes and files to working branch."
+      log_unknown("Re-applying uncommitted changes and files to working branch.")
       if system("cd #{docs_root_dir} && git stash pop")
-        puts "NOTE: Stash application successful."
+        log_unknown("Stash application successful.")
       else
-        puts "ERROR: Could not apply stashed code. Run `git stash apply` manually."
+        log_error("Could not apply stashed code. Run `git stash apply` manually.")
       end
       @stash_needed = false
     end
@@ -105,7 +88,7 @@ module AsciiBinder
           # Critical error - no topic map file at all.
           Trollop::die "Could not find any topic map file ('#{TOPIC_MAP_FILENAME}' or '#{BUILD_FILENAME}') at #{docs_root_dir} in branch '#{git.branch}'"
         end
-        warning "'#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'."
+        log_warn("'#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'.")
       end
       topic_file
     end
@@ -151,10 +134,7 @@ module AsciiBinder
         next if src_path.split('/').length < 3
         file_list << src_path
       end
-      file_list.map{ |path|
-        parts = path.split('/').slice(1..-1);
-        parts.slice(0..-2).join('/') + '/' + parts[-1].split('.')[0]
-      }
+      file_list.map{ |path| File.join(File.dirname(path),File.basename(path,'.adoc')) }
     end
 
     def remove_found_topic_files(branch,branch_topic_map,branch_topic_files)
@@ -166,7 +146,11 @@ module AsciiBinder
         end
       end
       if nonexistent_topics.length > 0
-        nl_warning "The #{topic_map_file} file on branch '#{branch}' references nonexistent topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n")
+        if AsciiBinder::LOG_LEVEL > log_levels[:debug]
+          log_warn("The #{topic_map_file} file on branch '#{branch}' references #{nonexistent_topics.length} nonexistent topics. Set logging to 'debug' for details.")
+        else
+          log_warn("The #{topic_map_file} file on branch '#{branch}' references nonexistent topics:\n" + nonexistent_topics.map{ |topic| "- #{topic}" }.join("\n"))
+        end
       end
     end
 
@@ -277,17 +261,17 @@ module AsciiBinder
       if not single_page.nil?
         single_page_path = single_page.split(':')[0].split('/')
         single_page_path << single_page.split(':')[1]
-        puts "Rebuilding '#{single_page_path.join('/')}' on branch '#{working_branch}'."
+        log_unknown("Rebuilding '#{single_page_path.join('/')}' on branch '#{working_branch}'.")
       end
 
       if not build_distro == ''
         if not distro_map.include_distro_key?(build_distro)
           exit
         else
-          puts "Building only the #{distro_map.get_distro(build_distro).name} distribution."
+          log_unknown("Building only the #{distro_map.get_distro(build_distro).name} distribution.")
         end
       elsif single_page.nil?
-        puts "Building all distributions."
+        log_unknown("Building all distributions.")
       end
 
       # Notify the user of missing local branches
@@ -297,11 +281,12 @@ module AsciiBinder
         missing_branches << dbranch
       end
       if missing_branches.length > 0 and single_page.nil?
-        puts "\nNOTE: The following branches do not exist in your local git repo:"
+        message = "The following branches do not exist in your local git repo:\n"
         missing_branches.each do |mbranch|
-          puts "- #{mbranch}"
+          message << "- #{mbranch}\n"
         end
-        puts "The build will proceed but these branches will not be generated."
+        message << "The build will proceed but these branches will not be generated."
+        log_warn(message)
       end
 
       # Generate all distros for all branches in the indicated branch group
@@ -313,7 +298,7 @@ module AsciiBinder
         if not local_branch == working_branch
           if single_page.nil?
             # Checkout the branch
-            puts "\nCHANGING TO BRANCH '#{local_branch}'"
+            log_unknown("CHANGING TO BRANCH '#{local_branch}'")
             git_checkout(local_branch)
           else
             next
@@ -337,7 +322,11 @@ module AsciiBinder
         remove_found_topic_files(local_branch,branch_topic_map,branch_orphan_files)
 
         if branch_orphan_files.length > 0 and single_page.nil?
-          nl_warning "Branch '#{local_branch}' includes the following .adoc files that are not referenced in the #{topic_map_file} file:\n" + branch_orphan_files.map{ |file| "- #{file}" }.join("\n")
+          if AsciiBinder::LOG_LEVEL > log_levels[:debug]
+            log_warn("Branch #{local_branch} includes #{branch_orphan_files.length} files that are not referenced in the #{topic_map_file} file. Set logging to 'debug' for details.")
+          else
+            log_warn("Branch '#{local_branch}' includes the following .adoc files that are not referenced in the #{topic_map_file} file:\n" + branch_orphan_files.map{ |file| "- #{file}" }.join("\n"))
+          end
         end
 
         # Run all distros.
@@ -368,7 +357,7 @@ module AsciiBinder
           end
 
           if first_branch
-            puts "\nBuilding #{distro.name} for branch '#{local_branch}'"
+            log_unknown("Building #{distro.name} for branch '#{local_branch}'")
             first_branch = false
           end
 
@@ -401,7 +390,7 @@ module AsciiBinder
         # Remove DITAA-generated images
         ditaa_image_files = Find.find(docs_root_dir).select{ |path| not path.nil? and not (path =~ /_preview/ or path =~ /_package/) and (path =~ /.*\.png$/ or path =~ /.*\.png\.cache$/) and not branch_image_files.include?(path) }
         if not ditaa_image_files.empty?
-          puts "\nRemoving ditaa-generated files from repo before changing branches."
+          log_unknown("Removing ditaa-generated files from repo before changing branches.")
           ditaa_image_files.each do |dfile|
             File.unlink(dfile)
           end
@@ -419,7 +408,7 @@ module AsciiBinder
       # If necessary, restore temporarily stashed files
       git_apply_and_drop
 
-      puts "\nAll builds completed."
+      log_unknown("All builds completed.")
     end
 
     def process_topic_entity_list(branch_config,single_page_path,navigation,topic_entity_list,preview_path='')
@@ -434,13 +423,17 @@ module AsciiBinder
           preview_path = topic_entity.preview_path(branch_config.distro.id,branch_config.dir)
           process_topic_entity_list(branch_config,single_page_path,navigation,topic_entity.subitems,preview_path)
         elsif topic_entity.is_topic?
-          if single_page_path.length == 0
-            puts "  - #{topic_entity.repo_path}"
-          end
           if topic_entity.is_alias?
             configure_and_generate_alias(topic_entity,branch_config)
           else
-            configure_and_generate_page(topic_entity,branch_config,navigation)
+            if File.exists?(topic_entity.source_path)
+              if single_page_path.length == 0
+                log_info("  - #{topic_entity.repo_path}")
+              end
+              configure_and_generate_page(topic_entity,branch_config,navigation)
+            else
+              log_warn("  - #{topic_entity.repo_path} <= Skipping nonexistent file")
+            end
           end
         end
       end
@@ -470,7 +463,7 @@ module AsciiBinder
         "repo_path=#{topic.repo_path}"
       ])
 
-      doc = Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs
+      doc = without_warnings { Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs }
       article_title = doc.doctitle || topic.name
 
       topic_html = doc.render
@@ -547,7 +540,7 @@ module AsciiBinder
           end
           site_dir = File.join(package_dir,site.id)
           if File.directory?(site_dir)
-            puts "\nPackaging #{distro_id} for #{site.id} site."
+            log_unknown("Packaging #{distro_id} for #{site.id} site.")
 
             # Any files in the root of the docs repo with names ending in:
             #     *-#{site}.html
@@ -591,7 +584,7 @@ module AsciiBinder
 
     def clean_up
       if not system("rm -rf #{docs_root_dir}/_preview/* #{docs_root_dir}/_package/*")
-        puts "Nothing to clean."
+        log_unknown("Nothing to clean.")
       end
     end
   end
