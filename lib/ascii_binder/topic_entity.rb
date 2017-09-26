@@ -37,7 +37,7 @@ module AsciiBinder
         if is_group?
           this_step = dir
         elsif is_topic?
-          this_step = name.end_with?('.adoc') ? name : "#{file}.adoc"
+          this_step = file.end_with?('.adoc') ? file : "#{file}.adoc"
         end
         @dir_path == '' ? this_step : File.join(@dir_path,this_step)
       end
