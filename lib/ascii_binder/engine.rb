@@ -437,9 +437,24 @@ module AsciiBinder
           if single_page_path.length == 0
             puts "  - #{topic_entity.repo_path}"
           end
-          configure_and_generate_page(topic_entity,branch_config,navigation)
+          if topic_entity.is_alias?
+            configure_and_generate_alias(topic_entity,branch_config)
+          else
+            configure_and_generate_page(topic_entity,branch_config,navigation)
+          end
         end
       end
+    end
+
+    def configure_and_generate_alias(topic,branch_config)
+      distro       = branch_config.distro
+      topic_target = topic.topic_alias
+      unless valid_url?(topic_target)
+        topic_target = File.join(branch_config.branch_url_base,topic_target + ".html")
+      end
+      topic_text = alias_text(topic_target)
+      preview_path = topic.preview_path(distro.id,branch_config.dir)
+      File.write(preview_path,topic_text)
     end
 
     def configure_and_generate_page(topic,branch_config,navigation)

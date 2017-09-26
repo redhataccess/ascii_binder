@@ -1,0 +1,9 @@
+= Aliased Topic
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+This topic exercises topic _aliasing_, which enables authors to manage page redirects without having to fiddle with web server settings.
+
+This behavior borrows directly from the same-named concept supported by the link:https://gohugo.io[hugo] blog generator.

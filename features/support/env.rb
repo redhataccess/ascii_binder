@@ -45,6 +45,10 @@ module Helpers
     @topic_map ||= YAML.load_stream(open(File.join(docs_root,'_topic_map.yml')))
   end
 
+  def alias_files
+    @alias_files ||= ['aliases/a_to_a.html','aliases/a_to_e.html']
+  end
+
   def preview_dir
     @preview_dir ||= File.join(docs_root,'_preview')
   end
@@ -76,6 +80,22 @@ module Helpers
 
   def find_html_files(dir)
     `cd #{dir} && find .`.split("\n").select{ |item| item.end_with?('.html') }.map{ |item| item[2..-1] }
+  end
+
+  def files_diff_explanation(gen_paths,cfg_paths)
+    gen_extras  = (gen_paths-cfg_paths)
+    cfg_extras  = (cfg_paths-gen_paths)
+    explanation = ''
+    if gen_extras.length > 0
+      explanation = "Unexpected extra files were generated:\n\t* " + gen_extras.join("\n\t* ")
+    end
+    if cfg_extras.length > 0
+      if explanation.length > 0
+        explanation = explanation + "\n"
+      end
+      explanation = explanation + "Expected files were not generated:\n\t* " + cfg_extras.join("\n\t* ")
+    end
+    return explanation
   end
 
   def actual_preview_info
@@ -292,6 +312,12 @@ module Helpers
       system("cd #{working_dir} && git add . > /dev/null && git commit -am 'Commit invalid distro map' > /dev/null")
   end
 
+  def invalidate_topic_map
+      invalid_map = File.join(gem_root,'features','support','_invalid_alias_topic_map.yml')
+      FileUtils.cp(invalid_map,File.join(docs_root,'_topic_map.yml'))
+      system("cd #{working_dir} && git add . > /dev/null && git commit -am 'Commit invalid alias topic map' > /dev/null")
+  end
+
   def initialize_remote_repo
     remote_dir = Dir.mktmpdir('ascii_binder-cucumber-remote')
     FileUtils.rm_rf(remote_dir)
@@ -357,7 +383,6 @@ module Helpers
     target_distro = real_preview_info[:distros][0]
     target_page   = real_preview_info[:pages][0].split('/').join(':').split('.')[0]
 
-
     if distro_count == 0 or branch_count == 0
       puts "ERROR: A build operation should produce at least one distro / branch preview."
       exit 1
@@ -413,8 +438,20 @@ module Helpers
             puts "ERROR: Expected distro / branch combo '#{distro}' / '#{branch}' was not generated for preview."
             exit 1
           end
+          # Alias check
+          alias_files.each do |afile|
+            genmatches = gen_paths_map[distro][branch].select{ |i| i.end_with?(afile) }
+            if genmatches.length == 0
+              puts "ERROR: Alias file '#{afile}' was not generated for distro / branch combo '#{distro}' / '#{branch}'."
+              exit 1
+            elsif genmatches.length > 1
+              puts "ERROR: Alias file '#{afile}' found more than once in generated output: #{genmatches.inspect}"
+              exit 1
+            end
+          end
           if not gen_paths_map[distro][branch] == all_paths_map[distro][branch]
-            puts "ERROR: Mismatch between expected and actual preview file paths for distro / branch combo '#{distro}' / '#{branch}'."
+            explanation = files_diff_explanation(gen_paths_map[distro][branch],all_paths_map[distro][branch])
+            puts "ERROR: Mismatch between expected and actual preview file paths for distro / branch combo '#{distro}' / '#{branch}'.\n#{explanation}"
             exit 1
           end
         end
@@ -434,10 +471,23 @@ module Helpers
             puts "ERROR: Content was generated for site '#{site}' even though it was only expected for site '#{target_site}'"
             exit 1
           end
-
+          # Alias check
+          if real_site_map[site][distro][branch].length > 0 and all_paths_map[site][distro][branch].length > 0
+            alias_files.each do |afile|
+              genmatches = real_site_map[site][distro][branch].select{ |i| i.end_with?(afile) }
+              if genmatches.length == 0
+                puts "ERROR: Alias file '#{afile}' was not generated for site / distro / branch combo '#{site}' / '#{distro}' / '#{branch}'."
+                exit 1
+              elsif genmatches.length > 1
+                puts "ERROR: Alias file '#{afile}' found more than once in generated site output: #{genmatches.inspect}"
+                exit 1
+              end
+            end
+          end
           # Confirm that what was generated matches what was expected.
           if (target_site == '' or site == target_site) and not real_site_map[site][distro][branch] == all_paths_map[site][distro][branch]
-            puts "ERROR: Mismatch between expected and actual site file paths for site / distro / branch combo '#{site}' / '#{distro}' / '#{branch}'."
+            explanation = files_diff_explanation(real_site_map[site][distro][branch],all_paths_map[site][distro][branch])
+            puts "ERROR: Mismatch between expected and actual site file paths for site / distro / branch combo '#{site}' / '#{distro}' / '#{branch}'.\n#{explanation}"
             exit 1
           end
         end

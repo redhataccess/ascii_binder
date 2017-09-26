@@ -5,7 +5,7 @@ include AsciiBinder::Helpers
 
 module AsciiBinder
   class TopicEntity
-    attr_reader :name, :dir, :file, :distro_keys, :subitems, :raw, :parent, :depth
+    attr_reader :name, :dir, :file, :topic_alias, :distro_keys, :subitems, :raw, :parent, :depth
 
     def initialize(topic_entity,actual_distro_keys,dir_path='',parent_group=nil,depth=0)
       @raw                = topic_entity
@@ -14,9 +14,13 @@ module AsciiBinder
       @name               = topic_entity['Name']
       @dir                = topic_entity['Dir']
       @file               = topic_entity['File']
+      @topic_alias        = topic_entity['Alias']
       @depth              = depth
       @actual_distro_keys = actual_distro_keys
       @distro_keys        = topic_entity.has_key?('Distros') ? parse_distros(topic_entity['Distros']) : actual_distro_keys
+      @nav_trees          = {}
+      @alias_lists        = {}
+      @path_lists         = {}
       @subitems           = []
       if topic_entity.has_key?('Topics')
         entity_dir  = @dir.nil? ? '<nil_dir>' : @dir
@@ -39,6 +43,10 @@ module AsciiBinder
       end
     end
 
+    def basename_path
+      @basename_path ||= File.join(File.dirname(repo_path),File.basename(repo_path,'.adoc'))
+    end
+
     def repo_path_html
       @repo_path_html ||= is_topic? ? File.join(File.dirname(repo_path),File.basename(repo_path,'.adoc')) + ".html" : repo_path
     end
@@ -58,9 +66,9 @@ module AsciiBinder
     def group_filepaths
       @group_filepaths ||= begin
         group_filepaths = []
-        if is_topic?
+        if is_topic? and not is_alias?
           group_filepaths << File.join(File.dirname(repo_path),File.basename(repo_path,'.adoc'))
-        else
+        elsif is_group?
           subitems.each do |subitem|
             group_filepaths.concat(subitem.group_filepaths)
           end
@@ -71,26 +79,67 @@ module AsciiBinder
     end
 
     def nav_tree(distro_key)
-      unless distro_keys.include?(distro_key)
-        return nil
-      end
-      nav_tree = { :id => id, :name => name }
-      if is_topic?
-        nav_tree[:path] = "../" + repo_path_html
-      elsif is_group?
-        sub_nav_items = []
-        subitems.each do |subitem|
-          sub_nav = subitem.nav_tree(distro_key)
-          next if sub_nav.nil?
-          sub_nav_items << sub_nav
+      @nav_trees[distro_key] ||= begin
+        nav_tree = {}
+        if distro_keys.include?(distro_key) and not is_alias?
+          nav_tree[:id]   = id
+          nav_tree[:name] = name
+          if is_topic?
+            nav_tree[:path] = "../" + repo_path_html
+          elsif is_group?
+            sub_nav_items = []
+            subitems.each do |subitem|
+              sub_nav = subitem.nav_tree(distro_key)
+              next if sub_nav.empty?
+              sub_nav_items << sub_nav
+            end
+            if sub_nav_items.empty?
+              nav_tree = {}
+            else
+              nav_tree[:topics] = sub_nav_items
+            end
+          end
         end
-
-        # Don't bother with this group if none of the sub-items is used by this distro
-        return nil if sub_nav_items.length == 0
-
-        nav_tree[:topics] = sub_nav_items
+        nav_tree
       end
-      return nav_tree
+    end
+
+    def alias_list(distro_key)
+      @alias_lists[distro_key] ||= begin
+        sub_aliases = []
+        if distro_keys.include?(distro_key)
+          if is_group?
+            subitems.each do |subitem|
+              sub_list = subitem.alias_list(distro_key)
+              sub_list.each do |sub_list_alias|
+                sub_aliases << sub_list_alias
+              end
+            end
+          elsif is_alias?
+            sub_aliases << { :alias_path => basename_path, :redirect_path => topic_alias }
+          end
+        end
+        sub_aliases
+      end
+    end
+
+    def path_list(distro_key)
+      @path_lists[distro_key] ||= begin
+        sub_paths = []
+        if distro_keys.include?(distro_key)
+          if is_group?
+            subitems.each do |subitem|
+              sub_list = subitem.path_list(distro_key)
+              sub_list.each do |sub_list_path|
+                sub_paths << sub_list_path
+              end
+            end
+          elsif is_topic? and not is_alias?
+            sub_paths << basename_path
+          end
+        end
+        sub_paths
+      end
     end
 
     # Is this topic entity or any of its children used in
@@ -138,6 +187,10 @@ module AsciiBinder
 
     def is_topic?
       @is_topic ||= dir.nil? and not name.nil? and not file.nil? and subitems.length == 0
+    end
+
+    def is_alias?
+      @is_alias ||= is_topic? and not topic_alias.nil?
     end
 
     def is_valid?
@@ -204,6 +257,13 @@ module AsciiBinder
             return false
           end
         end
+        if not topic_alias.nil?
+          if verbose
+            errors << "#{entity_id} is a topic group with an Alias entry. Aliases are only supported for topic items."
+          else
+            return false
+          end
+        end
         subitems.each do |subitem|
           next if subitem.is_valid?
           if verbose
@@ -216,6 +276,15 @@ module AsciiBinder
         if not valid_string?(file)
           if verbose
             errors << "#{entity_id} has invalid 'File' value."
+          else
+            return false
+          end
+        end
+        # We can do basic validation of the 'Alias' string here, but real validation has
+        # to be done after the whole topic map is loaded.
+        if not topic_alias.nil? and not valid_string?(topic_alias)
+          if verbose
+            errors << "#{entity_id} has invalid 'Alias' value."
           else
             return false
           end
