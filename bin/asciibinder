@@ -131,6 +131,7 @@ EOF
       opt :all_branches, "Instead of building only the current working branch, build all branches", :default => false
       opt :distro, "Instead of building all distros, build branches only for the specified distro.", :default => ''
       opt :page, "Build only the specified page for all distros and only the current working branch.", :default => ''
+      opt :log_level, "Set the logging output level for this operation.", :default => 'warn'
       conflicts :distro, :page
     end
   when "create"
@@ -159,6 +160,7 @@ Options:
 EOF
       opt :branches, "Create tracking branches after cloning.", :default => true
       opt :dir, "Specify the pathname of the local directory for cloning.", :default => ''
+      opt :log_level, "Set the logging output level for this operation.", :default => 'warn'
     end
   when "watch"
     Trollop::options do
@@ -185,6 +187,7 @@ Description:
   new version of the .adoc file, the new HTML is automatically
   regenerated and your page view is automatically refreshed.
 EOF
+      opt :log_level, "Set the logging output level for this operation.", :default => 'warn'
     end
   when "package"
     Trollop::options do
@@ -202,6 +205,7 @@ Description:
 Options:
 EOF
       opt :site, "Instead of packaging every docs site, package the specified site only.", :default => ''
+      opt :log_level, "Set the logging output level for this operation.", :default => 'warn'
     end
   when "help"
     Trollop::educate
@@ -258,6 +262,17 @@ end
 
 # Set the repo root
 set_docs_root_dir(File.expand_path(docs_basedir))
+
+# Set the log level
+user_log_level = :warn
+unless cmd_opts.nil? or cmd_opts[:log_level].nil?
+  user_log_level = cmd_opts[:log_level].to_sym
+  unless log_levels.has_key?(user_log_level)
+    Trollop::die "log_level value '#{cmd_opts[:log_level]}' is not recognized. Legal values are " + log_levels.keys.map{ |lvl| "'#{lvl.to_s}'" }.join(', ')
+  end
+end
+set_log_level(user_log_level)
+
 
 # Cloning? Time to try it.
 if cmd == 'clone'
