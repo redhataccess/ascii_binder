@@ -134,7 +134,7 @@ module AsciiBinder
         next if src_path.split('/').length < 3
         file_list << src_path
       end
-      file_list.map{ |path| File.join(File.dirname(path),File.basename(path,'.adoc')) }
+      file_list.map{ |path| File.join(File.dirname(path),File.basename(path,'.adoc'))[1..-1] }
     end
 
     def remove_found_topic_files(branch,branch_topic_map,branch_topic_files)
