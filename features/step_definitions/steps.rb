@@ -8,7 +8,7 @@ Given(/^an existing repo directory$/) do
   Dir.mkdir(working_dir)
 end
 
-Given(/^a nonexistant repo directory$/) do
+Given(/^a nonexistent repo directory$/) do
   working_dir
 end
 
@@ -66,7 +66,7 @@ Given(/^the docs repo contains no generated content$/) do
   end
 end
 
-Given(/^a nonexistant remote repo$/) do
+Given(/^a nonexistent remote repo$/) do
   @remote_repo_url = 'http://example.com/repo.git'
 end
 

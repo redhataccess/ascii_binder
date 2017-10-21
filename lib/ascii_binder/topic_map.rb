@@ -96,7 +96,7 @@ module AsciiBinder
           end
           next if valid_url?(alias_map[:redirect_path])
           if not distro_paths.include?(alias_map[:redirect_path])
-            errors << "Topic alias '#{alias_map[:alias_path]}' points to a nonexistant topic '#{alias_map[:redirect_path]}' for distro '#{distro_key}'"
+            errors << "Topic alias '#{alias_map[:alias_path]}' points to a nonexistent topic '#{alias_map[:redirect_path]}' for distro '#{distro_key}'"
           end
         end
       end

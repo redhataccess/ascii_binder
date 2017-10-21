@@ -13,7 +13,7 @@ Feature: asciibinder build
     When the user runs `asciibinder build` on that repo directory
     Then the program generates preview content for all distros in the current branch
 
-  Scenario: A user wants to do a build in a repo with alias that points to a nonexistant topic
+  Scenario: A user wants to do a build in a repo with alias that points to a nonexistent topic
     Given a valid AsciiBinder docs repo with an invalid alias
     When the user runs `asciibinder build` on that repo directory
     Then the program exits with a warning

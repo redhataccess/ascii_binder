@@ -7,7 +7,7 @@ Feature: asciibinder create
     When the user runs `asciibinder create` on that repo directory
     Then the program exits with a warning
 
-  Scenario: A user tries to create a repo in a nonexistant directory
-    Given a nonexistant repo directory
+  Scenario: A user tries to create a repo in a nonexistent directory
+    Given a nonexistent repo directory
     When the user runs `asciibinder create` on that repo directory
     Then the program generates a new base docs repo
