@@ -59,6 +59,10 @@ module AsciiBinder
       File.join(preview_dir,distro_key,branch_dir,repo_path_html)
     end
 
+    def topic_publish_url(distro_url,branch_dir)
+      File.join(distro_url,branch_dir,repo_path_html)
+    end
+
     def package_path(site_id,branch_dir)
       File.join(package_dir,site_id,branch_dir,repo_path_html)
     end
