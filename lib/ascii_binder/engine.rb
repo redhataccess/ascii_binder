@@ -489,29 +489,31 @@ module AsciiBinder
       end
 
       preview_path = topic.preview_path(distro.id,branch_config.dir)
+      topic_publish_url = topic.topic_publish_url(distro.site.url,branch_config.dir)
 
       page_args = {
-        :distro_key       => distro.id,
-        :distro           => branch_config.distro_name,
-        :site_name        => distro.site.name,
-        :site_url         => distro.site.url,
-        :topic_url        => preview_path,
-        :version          => branch_config.name,
-        :group_title      => group_title,
-        :subgroup_title   => subgroup_title,
-        :topic_title      => topic_title,
-        :article_title    => article_title,
-        :content          => topic_html,
-        :navigation       => navigation,
-        :group_id         => group_id,
-        :subgroup_id      => subgroup_id,
-        :topic_id         => topic_id,
-        :css_path         => "../../#{dir_depth}#{branch_config.dir}/#{STYLESHEET_DIRNAME}/",
-        :javascripts_path => "../../#{dir_depth}#{branch_config.dir}/#{JAVASCRIPT_DIRNAME}/",
-        :images_path      => "../../#{dir_depth}#{branch_config.dir}/#{IMAGE_DIRNAME}/",
-        :site_home_path   => "../../#{dir_depth}index.html",
-        :template_path    => template_dir,
-        :repo_path        => topic.repo_path,
+        :distro_key        => distro.id,
+        :distro            => branch_config.distro_name,
+        :site_name         => distro.site.name,
+        :site_url          => distro.site.url,
+        :topic_url         => preview_path,
+        :topic_publish_url => topic_publish_url,
+        :version           => branch_config.name,
+        :group_title       => group_title,
+        :subgroup_title    => subgroup_title,
+        :topic_title       => topic_title,
+        :article_title     => article_title,
+        :content           => topic_html,
+        :navigation        => navigation,
+        :group_id          => group_id,
+        :subgroup_id       => subgroup_id,
+        :topic_id          => topic_id,
+        :css_path          => "../../#{dir_depth}#{branch_config.dir}/#{STYLESHEET_DIRNAME}/",
+        :javascripts_path  => "../../#{dir_depth}#{branch_config.dir}/#{JAVASCRIPT_DIRNAME}/",
+        :images_path       => "../../#{dir_depth}#{branch_config.dir}/#{IMAGE_DIRNAME}/",
+        :site_home_path    => "../../#{dir_depth}index.html",
+        :template_path     => template_dir,
+        :repo_path         => topic.repo_path,
       }
       full_file_text = page(page_args)
       File.write(preview_path,full_file_text)
