@@ -491,6 +491,22 @@ module AsciiBinder
       preview_path = topic.preview_path(distro.id,branch_config.dir)
       topic_publish_url = topic.topic_publish_url(distro.site.url,branch_config.dir)
 
+      # Collect the topic keys together.  Allow lower level overriding
+      el = topic
+      topic_vars = {}
+      while el != nil do
+        if el.vars != nil
+          el.vars.each do |varhash|
+            if topic_vars == {}
+              topic_vars = varhash
+            else
+              topic_vars.merge(varhash) {|key, oldval, newval| oldval}
+            end
+          end
+        end
+        el = el.parent
+      end
+
       page_args = {
         :distro_key        => distro.id,
         :distro            => branch_config.distro_name,
@@ -514,6 +530,9 @@ module AsciiBinder
         :site_home_path    => "../../#{dir_depth}index.html",
         :template_path     => template_dir,
         :repo_path         => topic.repo_path,
+        :distro_vars       => distro.vars,
+        :branch_vars       => branch_config.vars,
+        :topic_vars        => topic_vars,
       }
       full_file_text = page(page_args)
       File.write(preview_path,full_file_text)

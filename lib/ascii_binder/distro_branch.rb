@@ -4,7 +4,7 @@ include AsciiBinder::Helpers
 
 module AsciiBinder
   class DistroBranch
-    attr_reader :id, :name, :dir, :distro, :distro_name, :distro_author
+    attr_reader :id, :name, :dir, :distro, :distro_name, :distro_author, :vars
 
     def initialize(branch_name,branch_config,distro)
       @id            = branch_name
@@ -13,6 +13,7 @@ module AsciiBinder
       @distro        = distro
       @distro_name   = distro.name
       @distro_author = distro.author
+      @vars          = branch_config['vars']
       if branch_config.has_key?('distro-overrides')
         if branch_config['distro-overrides'].has_key?('name')
           @distro_name = branch_config['distro-overrides']['name']

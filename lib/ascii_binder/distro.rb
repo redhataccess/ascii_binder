@@ -7,13 +7,14 @@ include AsciiBinder::Helpers
 
 module AsciiBinder
   class Distro
-    attr_reader :id, :name, :author, :site
+    attr_reader :id, :name, :author, :site, :vars
 
     def initialize(distro_map_filepath,distro_key,distro_config)
       @id         = distro_key
       @name       = distro_config['name']
       @author     = distro_config['author']
       @site       = AsciiBinder::Site.new(distro_config)
+      @vars        = distro_config['vars']
       @branch_map = {}
       distro_config['branches'].each do |branch_name,branch_config|
         if @branch_map.has_key?(branch_name)

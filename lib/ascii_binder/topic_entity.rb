@@ -5,7 +5,7 @@ include AsciiBinder::Helpers
 
 module AsciiBinder
   class TopicEntity
-    attr_reader :name, :dir, :file, :topic_alias, :distro_keys, :subitems, :raw, :parent, :depth
+    attr_reader :name, :dir, :file, :topic_alias, :distro_keys, :subitems, :raw, :parent, :depth, :vars
 
     def initialize(topic_entity,actual_distro_keys,dir_path='',parent_group=nil,depth=0)
       @raw                = topic_entity
@@ -15,6 +15,7 @@ module AsciiBinder
       @dir                = topic_entity['Dir']
       @file               = topic_entity['File']
       @topic_alias        = topic_entity['Alias']
+      @vars               = topic_entity['vars']
       @depth              = depth
       @actual_distro_keys = actual_distro_keys
       @distro_keys        = topic_entity.has_key?('Distros') ? parse_distros(topic_entity['Distros']) : actual_distro_keys
