@@ -133,6 +133,7 @@ EOF
       opt :distro, "Instead of building all distros, build branches only for the specified distro.", :default => ''
       opt :page, "Build only the specified page for all distros and only the current working branch.", :default => ''
       opt :log_level, "Set the logging output level for this operation.", :default => 'warn'
+      opt :toc_depth, "Maximum depth of topics allowed.  Use 0 for infinite depth.", :default => 2
       conflicts :distro, :page
     end
   when "create"
@@ -207,6 +208,7 @@ Options:
 EOF
       opt :site, "Instead of packaging every docs site, package the specified site only.", :default => ''
       opt :log_level, "Set the logging output level for this operation.", :default => 'warn'
+      opt :toc_depth, "Maximum depth of topics allowed.  Use 0 for infinite depth.", :default => 2
     end
   when "help"
     Trollop::educate
@@ -273,6 +275,13 @@ unless cmd_opts.nil? or cmd_opts[:log_level].nil?
   end
 end
 set_log_level(user_log_level)
+
+# Set the depth level
+user_depth = 2
+unless cmd_opts.nil? or cmd_opts[:toc_depth].nil?
+  user_depth = cmd_opts[:toc_depth].to_i
+end
+set_depth(user_depth)
 
 
 # Cloning? Time to try it.

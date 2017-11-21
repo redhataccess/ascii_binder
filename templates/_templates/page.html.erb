@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta content="IE=edge" http-equiv="X-UA-Compatible">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title><%= distro %> <%= version %> | <%= [group_title, subgroup_title, topic_title].compact.join(' | ') %></title>
+  <title><%= distro %> <%= version %>
+      <%= render("_templates/_title.html.erb", :navigation => navigation, :topic_id => topic_id) %>
+  </title>
 
   <!-- Bootstrap -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
@@ -39,20 +41,13 @@
       <li class="sitename">
         <a href="<%= site_home_path %>"><%= site_name %></a>
       </li>
-      <li class="hidden-xs active">
-        <%= breadcrumb_root %>
-      </li>
-      <li class="hidden-xs active">
-        <%= breadcrumb_group %>
-      </li>
-      <%= breadcrumb_subgroup_block %>
-      <li class="hidden-xs active">
-        <%= breadcrumb_topic %>
-      </li>
+      <%= render("_templates/_breadcrumb.html.erb", :navigation => navigation, :topic_id => topic_id, :subtopic_shim => subtopic_shim) %>
     </ol>
     <div class="row row-offcanvas row-offcanvas-left">
       <div class="col-xs-8 col-sm-3 col-md-3 sidebar sidebar-offcanvas">
-        <%= render("_templates/_nav.html.erb", :navigation => navigation, :group_id => group_id, :topic_id => topic_id, :subgroup_id => subgroup_id, :subtopic_shim => subtopic_shim) %>
+        <ul class="nav nav-sidebar">
+          <%= render("_templates/_nav.html.erb", :navigation => navigation, :topic_id => topic_id, :subtopic_shim => subtopic_shim) %>
+        </ul>
       </div>
       <div class="col-xs-12 col-sm-9 col-md-9 main">
         <div class="page-header">
