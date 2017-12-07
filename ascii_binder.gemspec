@@ -31,7 +31,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'guard-livereload'
   spec.add_dependency 'haml'
   spec.add_dependency 'json'
-  spec.add_dependency 'pandoc-ruby'
   spec.add_dependency 'sitemap_generator', '~> 5.1.0'
   spec.add_dependency 'trollop', '~> 2.1.2'
   spec.add_dependency 'yajl-ruby', '~> 1.3.0'
