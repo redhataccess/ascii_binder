@@ -5,7 +5,7 @@ RUN scl enable rh-ruby22 -- gem install ascii_binder
 USER root
 RUN yum install -y java-1.7.0-openjdk && \
     yum clean all
-
+USER nobody
 LABEL url="http://www.asciibinder.org" \
       summary="a documentation system built on Asciidoctor" \
       description="AsciiBinder is for documenting versioned, interrelated projects. Run this container image from the documentation repository, which is mounted into the container. Note: Generated files will be owned by root." \
