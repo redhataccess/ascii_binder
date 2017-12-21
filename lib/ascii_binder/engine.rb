@@ -493,6 +493,7 @@ module AsciiBinder
       page_args = {
         :distro_key        => distro.id,
         :distro            => branch_config.distro_name,
+        :branch            => branch_config.id,
         :site_name         => distro.site.name,
         :site_url          => distro.site.url,
         :topic_url         => preview_path,
