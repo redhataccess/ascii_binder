@@ -6,8 +6,8 @@ require 'ascii_binder/version'
 Gem::Specification.new do |spec|
   spec.name          = "ascii_binder"
   spec.version       = AsciiBinder::VERSION
-  spec.authors       = ["N. Harrison Ripps", "Jason Frey"]
-  spec.email         = ["nhr@redhat.com", "jfrey@redhat.com"]
+  spec.authors       = ["N. Harrison Ripps", "Jason Frey", "Carlos Munoz", "Brian Exelbierd"]
+  spec.email         = ["nhr@redhat.com", "jfrey@redhat.com", "chavo16@hotmail.com", "bex@pobox.com"]
   spec.summary       = %q{AsciiBinder is an AsciiDoc-based system for authoring and publishing closely related documentation sets from a single source.}
   spec.description   = spec.summary
   spec.homepage      = "http://asciibinder.org/"
