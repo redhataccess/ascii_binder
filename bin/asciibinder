@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'ascii_binder/distro_map'
 require 'ascii_binder/engine'
 require 'ascii_binder/helpers'
 require 'ascii_binder/version'
@@ -284,9 +285,14 @@ if cmd == 'clone'
   repo_check(docs_basedir)
 
   if cmd_opts[:branches]
+    cloned_map = AsciiBinder::DistroMap.new(File.join(docs_basedir,DISTRO_MAP_FILENAME))
+    unless cloned_map.is_valid?
+      error_info = cloned_map.errors.join("\n")
+      Trollop::die "The distro map in the newly cloned repo is invalid, with the following errors:\n#{error_info}"
+    end
     Dir.chdir(docs_basedir)
     puts "Tracking branch setup:"
-    distro_branches.each do |doc_branch|
+    cloned_map.distro_branches.each do |doc_branch|
       next if doc_branch == 'master'
       puts "- #{doc_branch}"
       system("git branch #{doc_branch} origin/#{doc_branch}")
