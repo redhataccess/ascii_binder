@@ -1,0 +1,14 @@
+<%- navigation.each do |topic_group| -%>
+  <%- if topic_id.start_with?(topic_group[:id]) %>
+    <li class="hidden-xs active">
+      <%- if topic_group.has_key?(:topics) -%>
+        <a href="<%= subtopic_shim %><%= topic_group[:path] %>"><%= topic_group[:name] %></a>
+      <%- else -%>
+        <%= topic_group[:name] %>
+      <%- end -%>
+    </li>
+  <%- end -%>
+  <%- if topic_group.has_key?(:topics) -%>
+    <%= render("_templates/_breadcrumb.html.erb", :navigation => topic_group[:topics], :topic_id => topic_id, :subtopic_shim => subtopic_shim) %>
+  <%- end -%>
+<%- end -%>

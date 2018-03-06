@@ -1,0 +1,8 @@
+<%- navigation.each do |topic_group| -%>
+  <%- if topic_id.start_with?(topic_group[:id]) %>
+    | <%= topic_group[:name] %>
+  <%- end -%>
+  <%- if topic_group.has_key?(:topics) -%>
+    <%= render("_templates/_title.html.erb", :navigation => topic_group[:topics], :topic_id => topic_id) %>
+  <%- end -%>
+<%- end -%>
