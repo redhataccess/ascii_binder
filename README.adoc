@@ -6,15 +6,14 @@ AsciiBinder is an AsciiDoc-based system for authoring and publishing closely rel
 
 == Learn More
 
-* See the http://www.asciibinder.org[homepage].
-* Have a gander at the http://www.asciibinder.org/latest/welcome/[AsciiBinder documentation].
+* Have a gander at the https://github.com/redhataccess/ascii_binder-docs[AsciiBinder documentation].
 * Or just take the https://rubygems.org/gems/ascii_binder[ascii_binder Ruby Gem] for a spin.
 
 The AsciiBinder system was initially developed for https://github.com/openshift/openshift-docs[OpenShift documentation], but has been revised to work for documenting a wide variety of complex, multi-versioned software projects.
 
 == Contributing
 
-We are using the https://github.com/redhataccess/ascii_binder/issues[Issues] page to track bugs and feature ideas on the code, so have a look and feel free to ask questions there. You can also chat with us on IRC at FreeNode, http://webchat.freenode.net/?randomnick=1&channels=asciibinder&uio=d4[#asciibinder] channel, or on Twitter - https://twitter.com/AsciiBinder[@AsciiBinder].
+We are using the https://github.com/redhataccess/ascii_binder/issues[Issues] page to track bugs and feature ideas on the code, so have a look and feel free to ask questions there.
 
 == License
 
