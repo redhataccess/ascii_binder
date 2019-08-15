@@ -6,7 +6,7 @@ AsciiBinder is an AsciiDoc-based system for authoring and publishing closely rel
 
 == Learn More
 
-* Have a gander at the https://github.com/redhataccess/ascii_binder-docs[AsciiBinder documentation].
+* Have a gander at the https://github.com/redhataccess/ascii_binder-docs/blob/master/welcome/index.adoc[AsciiBinder documentation].
 * Or just take the https://rubygems.org/gems/ascii_binder[ascii_binder Ruby Gem] for a spin.
 
 The AsciiBinder system was initially developed for https://github.com/openshift/openshift-docs[OpenShift documentation], but has been revised to work for documenting a wide variety of complex, multi-versioned software projects.
