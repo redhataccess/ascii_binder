@@ -54,6 +54,10 @@ module AsciiBinder
       AsciiBinder::DOCS_ROOT_DIR
     end
 
+    def set_depth(user_depth)
+      AsciiBinder.const_set("DEPTH", user_depth)
+    end
+
     def set_log_level(user_log_level)
       AsciiBinder.const_set("LOG_LEVEL", log_levels[user_log_level])
     end

@@ -239,12 +239,8 @@ module AsciiBinder
         end
       end
 
-      # Check the depth. For now, max depth is '2':
-      #
-      # [<group>,<subgroup>,<topic>]
-      #
-      # But this limit will be lifted in the next major version
-      if depth > 2
+      # Check the depth.
+      if (depth > AsciiBinder::DEPTH) and (AsciiBinder::DEPTH != 0)
         if verbose
           errors << "#{entity_id} exceeds the maximum nested depth."
         else

@@ -188,11 +188,12 @@ module AsciiBinder
       args[:breadcrumb_root], args[:breadcrumb_group], args[:breadcrumb_subgroup], args[:breadcrumb_topic] = extract_breadcrumbs(args)
 
       args[:breadcrumb_subgroup_block] = ''
-      args[:subtopic_shim]             = ''
       if args[:breadcrumb_subgroup]
         args[:breadcrumb_subgroup_block] = "<li class=\"hidden-xs active\">#{args[:breadcrumb_subgroup]}</li>"
-        args[:subtopic_shim]             = '../'
       end
+
+      args[:subtopic_shim] = '../' * (args[:topic_id].split('::').length - 2)
+      args[:subtopic_shim] = '' if args[:subtopic_shim].nil?
 
       template_path = File.expand_path("#{docs_root_dir}/_templates/page.html.erb")
       template_renderer.render(template_path, args)
@@ -466,10 +467,6 @@ module AsciiBinder
       article_title = doc.doctitle || topic.name
 
       topic_html = doc.render
-      dir_depth  = ''
-      if branch_config.dir.split('/').length > 1
-        dir_depth = '../' * (branch_config.dir.split('/').length - 1)
-      end
 
       # This is logic bridges newer arbitrary-depth-tolerant code to
       # older depth-limited code. Truly removing depth limitations will
@@ -484,8 +481,9 @@ module AsciiBinder
       if breadcrumb.length == 3
         subgroup_title = breadcrumb[1][:name]
         subgroup_id    = breadcrumb[1][:id]
-        dir_depth      = '../' + dir_depth
       end
+      dir_depth = '../' * topic.breadcrumb[-1][:id].split('::').length
+      dir_depth = '' if dir_depth.nil?
 
       preview_path = topic.preview_path(distro.id,branch_config.dir)
       topic_publish_url = topic.topic_publish_url(distro.site.url,branch_config.dir)
@@ -508,10 +506,10 @@ module AsciiBinder
         :group_id          => group_id,
         :subgroup_id       => subgroup_id,
         :topic_id          => topic_id,
-        :css_path          => "../../#{dir_depth}#{branch_config.dir}/#{STYLESHEET_DIRNAME}/",
-        :javascripts_path  => "../../#{dir_depth}#{branch_config.dir}/#{JAVASCRIPT_DIRNAME}/",
-        :images_path       => "../../#{dir_depth}#{branch_config.dir}/#{IMAGE_DIRNAME}/",
-        :site_home_path    => "../../#{dir_depth}index.html",
+        :css_path          => "#{dir_depth}#{branch_config.dir}/#{STYLESHEET_DIRNAME}/",
+        :javascripts_path  => "#{dir_depth}#{branch_config.dir}/#{JAVASCRIPT_DIRNAME}/",
+        :images_path       => "#{dir_depth}#{branch_config.dir}/#{IMAGE_DIRNAME}/",
+        :site_home_path    => "#{dir_depth}index.html",
         :template_path     => template_dir,
         :repo_path         => topic.repo_path,
       }

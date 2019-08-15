@@ -13,7 +13,7 @@ The AsciiBinder system was initially developed for https://github.com/openshift/
 
 == Contributing
 
-We are using the https://github.com/redhataccess/ascii_binder/issues[Issues] page to track bugs and feature ideas on the code, so have a look and feel free to ask questions there. You can also chat with us on IRC at FreeNode, http://webchat.freenode.net/?randomnick=1&channels=asciibinder&uio=d4[#asciibinder] channel, or on Twitter - https://twitter.com/AsciiBinder[@AsciiBinder].
+We are using the https://github.com/redhataccess/ascii_binder/issues[Issues] page to track bugs and feature ideas on the code, so have a look and feel free to ask questions there.
 
 == License
 
