@@ -238,8 +238,7 @@ module AsciiBinder
 
     def asciidoctor_page_attrs(more_attrs=[])
       [
-        'source-highlighter=coderay',
-        'coderay-css=style',
+        'source-highlighter=rouge',
         'linkcss!',
         'icons=font',
         'idprefix=',
