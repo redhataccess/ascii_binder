@@ -183,11 +183,9 @@ Description:
   ...except that the Guardfile automatically detects and runs this as
   you work.
 
-  This is meant to be used in conjunction with a web browser that is
-  running a LiveReload plugin. If you are viewing the output HTML page
-  in a browser where LiveReload is active, then every time you save a
-  new version of the .adoc file, the new HTML is automatically
-  regenerated and your page view is automatically refreshed.
+  This is meant to be used in conjunction with a web browser that is viewing the
+  output HTML page. Every time you save a new version of the .adoc file, you can
+  manually refresh your page to view the newly-generated HTML.
 EOF
       opt :log_level, "Set the logging output level for this operation.", :default => 'warn'
     end
