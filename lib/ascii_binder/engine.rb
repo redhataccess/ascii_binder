@@ -459,7 +459,8 @@ module AsciiBinder
         "product-title=#{branch_config.distro_name}",
         "product-version=#{branch_config.name}",
         "product-author=#{branch_config.distro_author}",
-        "repo_path=#{topic.repo_path}"
+        "repo_path=#{topic.repo_path}",
+        "allow-uri-read="
       ])
 
       doc = without_warnings { Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs }
