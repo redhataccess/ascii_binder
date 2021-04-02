@@ -451,7 +451,7 @@ module AsciiBinder
 
     def configure_and_generate_page(topic,branch_config,navigation)
       distro = branch_config.distro
-      topic_adoc = File.open(topic.source_path,'r').read
+      # topic_adoc = File.open(topic.source_path,'r').read
 
       page_attrs = asciidoctor_page_attrs([
         "imagesdir=#{File.join(topic.parent.source_path,'images')}",
@@ -463,58 +463,67 @@ module AsciiBinder
         "allow-uri-read="
       ])
 
-      doc = without_warnings { Asciidoctor.load topic_adoc, :header_footer => false, :safe => :unsafe, :attributes => page_attrs }
-      article_title = doc.doctitle || topic.name
+      File.open topic.source_path, 'r' do |topic_file|
 
-      topic_html = doc.render
+        doc = without_warnings { Asciidoctor.load topic_file, :header_footer => false, :safe => :unsafe, :attributes => page_attrs, :base_dir => "." }
+        article_title = doc.doctitle || topic.name
 
-      # This is logic bridges newer arbitrary-depth-tolerant code to
-      # older depth-limited code. Truly removing depth limitations will
-      # require changes to page templates in user docs repos.
-      breadcrumb     = topic.breadcrumb
-      group_title    = breadcrumb[0][:name]
-      group_id       = breadcrumb[0][:id]
-      topic_title    = breadcrumb[-1][:name]
-      topic_id       = breadcrumb[-1][:id]
-      subgroup_title = nil
-      subgroup_id    = nil
-      if breadcrumb.length == 3
-        subgroup_title = breadcrumb[1][:name]
-        subgroup_id    = breadcrumb[1][:id]
+        topic_html = doc.render
+
+        # This is logic bridges newer arbitrary-depth-tolerant code to
+        # older depth-limited code. Truly removing depth limitations will
+        # require changes to page templates in user docs repos.
+        breadcrumb     = topic.breadcrumb
+        group_title    = breadcrumb[0][:name]
+        group_id       = breadcrumb[0][:id]
+        topic_title    = breadcrumb[-1][:name]
+        topic_id       = breadcrumb[-1][:id]
+        subgroup_title = nil
+        subgroup_id    = nil
+        if breadcrumb.length == 3
+          subgroup_title = breadcrumb[1][:name]
+          subgroup_id    = breadcrumb[1][:id]
+        end
+        dir_depth = '../' * topic.breadcrumb[-1][:id].split('::').length
+        dir_depth = '' if dir_depth.nil?
+
+        preview_path = topic.preview_path(distro.id,branch_config.dir)
+        topic_publish_url = topic.topic_publish_url(distro.site.url,branch_config.dir)
+
+        page_args = {
+          :distro_key        => distro.id,
+          :distro            => branch_config.distro_name,
+          :branch            => branch_config.id,
+          :site_name         => distro.site.name,
+          :site_url          => distro.site.url,
+          :topic_url         => preview_path,
+          :topic_publish_url => topic_publish_url,
+          :version           => branch_config.name,
+          :group_title       => group_title,
+          :subgroup_title    => subgroup_title,
+          :topic_title       => topic_title,
+          :article_title     => article_title,
+          :content           => topic_html,
+          :navigation        => navigation,
+          :group_id          => group_id,
+          :subgroup_id       => subgroup_id,
+          :topic_id          => topic_id,
+          :css_path          => "#{dir_depth}#{branch_config.dir}/#{STYLESHEET_DIRNAME}/",
+          :javascripts_path  => "#{dir_depth}#{branch_config.dir}/#{JAVASCRIPT_DIRNAME}/",
+          :images_path       => "#{dir_depth}#{branch_config.dir}/#{IMAGE_DIRNAME}/",
+          :site_home_path    => "#{dir_depth}index.html",
+          :template_path     => template_dir,
+          :repo_path         => topic.repo_path,
+        }
+        full_file_text = page(page_args)
+
+
+        File.open(preview_path, 'w') { |file| file.write(full_file_text) }
+
+
+        # File.write(preview_path,full_file_text)
+
       end
-      dir_depth = '../' * topic.breadcrumb[-1][:id].split('::').length
-      dir_depth = '' if dir_depth.nil?
-
-      preview_path = topic.preview_path(distro.id,branch_config.dir)
-      topic_publish_url = topic.topic_publish_url(distro.site.url,branch_config.dir)
-
-      page_args = {
-        :distro_key        => distro.id,
-        :distro            => branch_config.distro_name,
-        :branch            => branch_config.id,
-        :site_name         => distro.site.name,
-        :site_url          => distro.site.url,
-        :topic_url         => preview_path,
-        :topic_publish_url => topic_publish_url,
-        :version           => branch_config.name,
-        :group_title       => group_title,
-        :subgroup_title    => subgroup_title,
-        :topic_title       => topic_title,
-        :article_title     => article_title,
-        :content           => topic_html,
-        :navigation        => navigation,
-        :group_id          => group_id,
-        :subgroup_id       => subgroup_id,
-        :topic_id          => topic_id,
-        :css_path          => "#{dir_depth}#{branch_config.dir}/#{STYLESHEET_DIRNAME}/",
-        :javascripts_path  => "#{dir_depth}#{branch_config.dir}/#{JAVASCRIPT_DIRNAME}/",
-        :images_path       => "#{dir_depth}#{branch_config.dir}/#{IMAGE_DIRNAME}/",
-        :site_home_path    => "#{dir_depth}index.html",
-        :template_path     => template_dir,
-        :repo_path         => topic.repo_path,
-      }
-      full_file_text = page(page_args)
-      File.write(preview_path,full_file_text)
     end
 
     # package_docs
