@@ -464,6 +464,7 @@ module AsciiBinder
       ])
 
       File.open topic.source_path, 'r' do |topic_file|
+        relative_prefix = Pathname.new(topic_file).relative_from_path(Pathname.cwd())
 
         doc = without_warnings { Asciidoctor.load topic_file, :header_footer => false, :safe => :unsafe, :attributes => page_attrs, :base_dir => "." }
         article_title = doc.doctitle || topic.name
