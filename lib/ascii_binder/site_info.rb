@@ -7,7 +7,7 @@ module AsciiBinder
       @name     = distro.site.name
       @url      = distro.site.url
       @distros  = {}
-      @branches = ['master']
+      @branches = ['main']
       add_distro(distro)
     end
 

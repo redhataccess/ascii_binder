@@ -299,9 +299,9 @@ module Helpers
       end
       system("cd #{working_dir} && git add . > /dev/null && git commit -am 'test commit' > /dev/null")
       if multiple_distros
-        system("cd #{working_dir} && git checkout -b branch1 > /dev/null 2>&1 && git checkout -b branch2 > /dev/null 2>&1 && git checkout master > /dev/null 2>&1")
+        system("cd #{working_dir} && git checkout -b branch1 > /dev/null 2>&1 && git checkout -b branch2 > /dev/null 2>&1 && git checkout main > /dev/null 2>&1")
       end
-      set_initial_working_branch('master')
+      set_initial_working_branch('main')
     end
     working_dir
   end
@@ -325,7 +325,7 @@ module Helpers
     if run_command('create',[],remote_dir)[:status].exitstatus == 0
       clone_map = File.join(gem_root,'features','support','_clone_distro_map.yml')
       FileUtils.cp(clone_map,File.join(remote_dir,'_distro_map.yml'))
-      system("cd #{remote_dir} && git add . > /dev/null && git commit -am 'remote commit' > /dev/null && git checkout -b branch1 > /dev/null 2>&1 && git checkout master > /dev/null 2>&1")
+      system("cd #{remote_dir} && git add . > /dev/null && git commit -am 'remote commit' > /dev/null && git checkout -b branch1 > /dev/null 2>&1 && git checkout main > /dev/null 2>&1")
     else
       puts "ERROR: Could not initialize remote repo"
       exit 1

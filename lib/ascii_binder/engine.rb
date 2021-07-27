@@ -467,7 +467,7 @@ module AsciiBinder
 
         doc = without_warnings { Asciidoctor.load topic_file, :header_footer => false, :safe => :unsafe, :attributes => page_attrs, :base_dir => "." }
         article_title = doc.doctitle || topic.name
-
+                
         topic_html = doc.render
 
         # This is logic bridges newer arbitrary-depth-tolerant code to
