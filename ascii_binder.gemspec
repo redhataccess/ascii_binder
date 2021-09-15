@@ -36,5 +36,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'trollop', '~> 2.1.2'
   spec.add_dependency 'yajl-ruby', '~> 1.3.0'
   spec.add_dependency 'tilt'
+  spec.add_dependency 'bigdecimal'
 
 end

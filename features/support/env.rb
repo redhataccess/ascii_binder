@@ -364,7 +364,7 @@ module Helpers
 
     # Make sure the build finished on the same branch where it started.
     git = Git.open(working_dir)
-    current_working_branch = git.branch.name
+    current_working_branch = git.current_branch
     unless current_working_branch == initial_working_branch
       puts "ERROR: Build operation started on branch '#{initial_working_branch}' but ended on branch '#{current_working_branch}'"
       exit 1

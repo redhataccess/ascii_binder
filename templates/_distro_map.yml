@@ -6,6 +6,6 @@ ascii_binder:
   site_name: Home
   site_url: http://asciibinder.org/
   branches:
-    master:
+    main:
       name: Latest
       dir: latest
