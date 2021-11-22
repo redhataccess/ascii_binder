@@ -31,9 +31,9 @@ def repo_check(docs_basedir)
     end
   end
   # Either of these must be present
-  unless File.exist?(File.join(docs_basedir, '_build_cfg.yml')) or File.exist?(File.join(docs_basedir, '_topic_map.yml'))
-    missing_files = true
-  end
+#  unless File.exist?(File.join("#{docs_basedir}/#{TOPIC_MAP_FOLDER}", '_topic_map.yml'))
+#    missing_files = true
+#  end
   if missing_files or not in_git_repo(docs_basedir)
     Trollop::die "The specified docs base directory '#{docs_basedir}' does not appear to be part of an AsciiBinder-compatible repo."
   end

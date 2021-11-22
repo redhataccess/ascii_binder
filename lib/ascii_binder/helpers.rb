@@ -4,6 +4,7 @@ require 'stringio'
 module AsciiBinder
   module Helpers
     BUILD_FILENAME      = '_build_cfg.yml'
+    TOPIC_MAP_FOLDER    = '_topic_maps'
     TOPIC_MAP_FILENAME  = '_topic_map.yml'
     DISTRO_MAP_FILENAME = '_distro_map.yml'
     PREVIEW_DIRNAME     = '_preview'

@@ -10,12 +10,13 @@ module AsciiBinder
     attr_reader :list
 
     def initialize(topic_file,distro_keys)
-      @topic_yaml  = YAML.load_stream(open(File.join(docs_root_dir,topic_file)))
+      @topic_yaml  = YAML.load_stream(open(topic_file))
       @distro_keys = distro_keys
       @list        = []
       @topic_yaml.each do |topic_entity|
         @list << AsciiBinder::TopicEntity.new(topic_entity,distro_keys)
       end
+
     end
 
     def filepaths

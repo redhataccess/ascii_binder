@@ -78,18 +78,50 @@ module AsciiBinder
 
     # Protip: Don't cache these! The topic map needs to be reread every time we change branches.
     def topic_map_file
+
+      # new stuff 1/Nov/2021
+      # allow users to break up the topic map into multiple topic maps
+      # load topic maps from a single folder called _topic_maps.
+      # we assume that all files in this folder are correctly formatted topic maps. If not, you will get normal asciibinder errors
+      topic_map_folder = TOPIC_MAP_FOLDER
       topic_file = TOPIC_MAP_FILENAME
-      unless File.exist?(File.join(docs_root_dir,topic_file))
-        # The new filename '_topic_map.yml' couldn't be found;
-        # switch to the old one and warn the user.
-        topic_file = BUILD_FILENAME
-        unless File.exist?(File.join(docs_root_dir,topic_file))
-          # Critical error - no topic map file at all.
-          Trollop::die "Could not find any topic map file ('#{TOPIC_MAP_FILENAME}' or '#{BUILD_FILENAME}') at #{docs_root_dir} in branch '#{git.branch}'"
+
+      if !Dir.exist?(File.join(docs_root_dir, topic_map_folder))
+        # if the _topic_maps directory doesn't exist or is empty, see if we can find the topic map in the root folder to maintain backward compatibility
+
+        if !File.exist?(File.join(docs_root_dir, topic_file))
+          # fall back to looking for a _topic_map in the root directory
+
+          topic_file = BUILD_FILENAME # old folders use build_config.yml
+
+          if !File.exist?(File.join(docs_root_dir, topic_file))
+            # Critical error - no topic map file at all.
+            Trollop::die "Could not find a valid topic map file. There is no #{TOPIC_MAP_FOLDER} folder and the fall back files #{TOPIC_MAP_FILENAME} or #{BUILD_FILENAME} in branch '#{git.branch}' were also not found."
+          else
+            t = File.join(docs_root_dir, topic_file) # found build_config
+          end
+        else
+          t = File.join(docs_root_dir, topic_file) # found topic_map in root
         end
-        log_warn("'#{BUILD_FILENAME}' is a deprecated filename. Rename this to '#{TOPIC_MAP_FILENAME}'.")
+
+      else
+
+        # topic map files are in the _topic_maps folder
+
+        # create a combined temp file with all topic maps
+        tf = Tempfile.new("#{TOPIC_MAP_FILENAME}")
+
+        Dir.glob("#{topic_map_folder}/*.yml").each do |filename|
+          lines = IO.read(filename)
+          tf << lines
+        end
+
+        t = tf.path
       end
-      topic_file
+
+      # returns the path to the final file
+      t
+
     end
 
     def topic_map
@@ -467,7 +499,7 @@ module AsciiBinder
 
         doc = without_warnings { Asciidoctor.load topic_file, :header_footer => false, :safe => :unsafe, :attributes => page_attrs, :base_dir => "." }
         article_title = doc.doctitle || topic.name
-                
+
         topic_html = doc.render
 
         # This is logic bridges newer arbitrary-depth-tolerant code to
