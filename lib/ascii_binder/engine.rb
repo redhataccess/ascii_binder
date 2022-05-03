@@ -217,11 +217,16 @@ module AsciiBinder
     def page(args)
       # TODO: This process of rebuilding the entire nav for every page will not scale well.
       #       As the doc set increases, we will need to think about refactoring this.
-      args[:breadcrumb_root], args[:breadcrumb_group], args[:breadcrumb_subgroup], args[:breadcrumb_topic] = extract_breadcrumbs(args)
+      args[:breadcrumb_root], args[:breadcrumb_group], args[:breadcrumb_subgroup], args[:breadcrumb_subsubgroup], args[:breadcrumb_topic] = extract_breadcrumbs(args)
 
       args[:breadcrumb_subgroup_block] = ''
       if args[:breadcrumb_subgroup]
         args[:breadcrumb_subgroup_block] = "<li class=\"hidden-xs active\">#{args[:breadcrumb_subgroup]}</li>"
+      end
+
+      args[:breadcrumb_subsubgroup_block] = ''
+      if args[:breadcrumb_subsubgroup]
+        args[:breadcrumb_subsubgroup_block] = "<li class=\"hidden-xs active\">#{args[:breadcrumb_subsubgroup]}</li>"
       end
 
       args[:subtopic_shim] = '../' * (args[:topic_id].split('::').length - 2)
@@ -233,38 +238,63 @@ module AsciiBinder
 
     def extract_breadcrumbs(args)
       breadcrumb_root = breadcrumb_group = breadcrumb_subgroup = breadcrumb_topic = nil
+      selected_subgroup = selected_subsubgroup = nil
 
       root_group          = args[:navigation].first
       selected_group      = args[:navigation].detect { |group| group[:id] == args[:group_id] }
       selected_subgroup   = selected_group[:topics].detect { |subgroup| subgroup[:id] == args[:subgroup_id] }
-      current_is_subtopic = selected_subgroup ? true : false
+      if selected_subgroup
+        selected_subsubgroup   = selected_subgroup[:topics].detect { |subsubgroup| subsubgroup[:id] == args[:subsubgroup_id] }
+      end
+
+      offset = 0;
+      if selected_subgroup
+        offset = 1
+      end
+      if selected_subsubgroup
+        offset = 2
+      end
 
       if root_group
         root_topic = root_group[:topics].first
-        breadcrumb_root = linkify_breadcrumb(root_topic[:path], "#{args[:distro]} #{args[:version]}", current_is_subtopic) if root_topic
+        breadcrumb_root = linkify_breadcrumb(root_topic[:path], "#{args[:distro]} #{args[:version]}", offset) if root_topic
       end
 
       if selected_group
         group_topic = selected_group[:topics].first
-        breadcrumb_group = linkify_breadcrumb(group_topic[:path], selected_group[:name], current_is_subtopic) if group_topic
-
-        if selected_subgroup
-          subgroup_topic = selected_subgroup[:topics].first
-          breadcrumb_subgroup = linkify_breadcrumb(subgroup_topic[:path], selected_subgroup[:name], current_is_subtopic) if subgroup_topic
-
-          selected_topic = selected_subgroup[:topics].detect { |topic| topic[:id] == args[:topic_id] }
-          breadcrumb_topic = linkify_breadcrumb(nil, selected_topic[:name], current_is_subtopic) if selected_topic
-        else
-          selected_topic = selected_group[:topics].detect { |topic| topic[:id] == args[:topic_id] }
-          breadcrumb_topic = linkify_breadcrumb(nil, selected_topic[:name], current_is_subtopic) if selected_topic
-        end
+        breadcrumb_group = linkify_breadcrumb(group_topic[:path], selected_group[:name], offset) if group_topic
+        selected_topic = selected_group[:topics].detect { |topic| topic[:id] == args[:topic_id] }
+        breadcrumb_topic = linkify_breadcrumb(nil, selected_topic[:name], offset) if selected_topic
       end
 
-      return breadcrumb_root, breadcrumb_group, breadcrumb_subgroup, breadcrumb_topic
+      if selected_subgroup
+        subgroup_topic = selected_subgroup[:topics].first
+        breadcrumb_subgroup = linkify_breadcrumb(subgroup_topic[:path], selected_subgroup[:name], offset) if subgroup_topic
+
+        selected_topic = selected_subgroup[:topics].detect { |topic| topic[:id] == args[:topic_id] }
+        breadcrumb_topic = linkify_breadcrumb(nil, selected_topic[:name], offset) if selected_topic
+      end
+
+      if selected_subsubgroup
+        subsubgroup_topic = selected_subsubgroup[:topics].first
+        breadcrumb_subsubgroup = linkify_breadcrumb(subsubgroup_topic[:path], selected_subsubgroup[:name], offset) if subsubgroup_topic
+
+        selected_topic = selected_subsubgroup[:topics].detect { |topic| topic[:id] == args[:topic_id] }
+        breadcrumb_topic = linkify_breadcrumb(nil, selected_topic[:name], offset) if selected_topic
+      end
+
+
+      return breadcrumb_root, breadcrumb_group, breadcrumb_subgroup, breadcrumb_subsubgroup, breadcrumb_topic
     end
 
-    def linkify_breadcrumb(href, text, extra_level)
-      addl_level = extra_level ? '../' : ''
+    def linkify_breadcrumb(href, text, offset)
+      addl_level = ''
+      if offset == 1
+        addl_level = '../'
+      end
+      if offset == 2
+        addl_level = '../../'
+      end
       href ? "<a href=\"#{addl_level}#{href}\">#{text}</a>" : text
     end
 
@@ -512,10 +542,24 @@ module AsciiBinder
         topic_id       = breadcrumb[-1][:id]
         subgroup_title = nil
         subgroup_id    = nil
+        subsubgroup_title = nil
+        subsubgroup_id    = nil
         if breadcrumb.length == 3
           subgroup_title = breadcrumb[1][:name]
           subgroup_id    = breadcrumb[1][:id]
         end
+
+        if breadcrumb.length == 4     
+          topic_title    = breadcrumb[-1][:name]
+          topic_id       = breadcrumb[-1][:id]
+          subsubgroup_title = breadcrumb[-2][:name]
+          subsubgroup_id    = breadcrumb[-2][:id]
+          subgroup_title = breadcrumb[-3][:name]
+          subgroup_id    = breadcrumb[-3][:id]
+          group_title    = breadcrumb[-4][:name]
+          group_id       = breadcrumb[-4][:id]
+        end
+
         dir_depth = '../' * topic.breadcrumb[-1][:id].split('::').length
         dir_depth = '' if dir_depth.nil?
 
@@ -533,12 +577,14 @@ module AsciiBinder
           :version           => branch_config.name,
           :group_title       => group_title,
           :subgroup_title    => subgroup_title,
+          :subsubgroup_title    => subsubgroup_title,
           :topic_title       => topic_title,
           :article_title     => article_title,
           :content           => topic_html,
           :navigation        => navigation,
           :group_id          => group_id,
           :subgroup_id       => subgroup_id,
+          :subsubgroup_id       => subsubgroup_id,
           :topic_id          => topic_id,
           :css_path          => "#{dir_depth}#{branch_config.dir}/#{STYLESHEET_DIRNAME}/",
           :javascripts_path  => "#{dir_depth}#{branch_config.dir}/#{JAVASCRIPT_DIRNAME}/",
