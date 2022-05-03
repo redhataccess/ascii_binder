@@ -116,6 +116,7 @@ module AsciiBinder
           tf << lines
         end
 
+        tf.rewind
         t = tf.path
       end
 
