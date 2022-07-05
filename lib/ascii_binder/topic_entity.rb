@@ -153,7 +153,7 @@ module AsciiBinder
       return false unless distro_keys.include?(distro_key)
 
       # If we're building a single page, check if we're on the right track.
-      if single_page_path.length > 0
+      if single_page_path.length > 0  and not single_page_path[depth].nil?
         if is_group?
           return false unless single_page_path[depth] == dir
         elsif is_topic?
