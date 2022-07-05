@@ -111,7 +111,7 @@ module AsciiBinder
         # create a combined temp file with all topic maps
         tf = Tempfile.new("#{TOPIC_MAP_FILENAME}")
 
-        Dir.glob("#{topic_map_folder}/*.yml").each do |filename|
+        Dir.glob("#{topic_map_folder}/*.yml").sort.each do |filename|
           lines = IO.read(filename)
           tf << lines
         end
