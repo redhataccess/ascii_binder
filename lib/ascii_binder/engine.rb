@@ -114,6 +114,7 @@ module AsciiBinder
         Dir.glob("#{topic_map_folder}/*.yml").sort.each do |filename|
           lines = IO.read(filename)
           tf << lines
+          tf.write "\n"
         end
 
         t = tf.path
