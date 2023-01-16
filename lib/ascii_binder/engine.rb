@@ -117,6 +117,7 @@ module AsciiBinder
           tf.write "\n"
         end
 
+        tf.rewind
         t = tf.path
       end
 
