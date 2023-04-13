@@ -412,7 +412,7 @@ module AsciiBinder
           end
 
           # Get the current distro / branch object
-          branch_config = AsciiBinder::DistroBranch.new('',{ "name" => "Branch Build", "dir" => local_branch },distro)
+          branch_config = AsciiBinder::DistroBranch.new('',{ "name" => "Branch-Build", "dir" => local_branch },distro)
           dev_branch    = true
           if distro.branch_ids.include?(local_branch)
             branch_config = distro.branch(local_branch)
