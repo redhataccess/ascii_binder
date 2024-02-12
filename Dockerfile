@@ -13,7 +13,7 @@ LABEL url="http://www.asciibinder.org" \
           -v `pwd`:/docs:z \
           IMAGE"
 
-ENV JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.95-2.6.4.0.el7_2.x86_64/jre/
+ENV JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.261-2.6.22.2.el7_8.x86_64/jre/
 ENV LANG=en_US.UTF-8
 WORKDIR /docs
 RUN git config --global --add safe.directory /docs
