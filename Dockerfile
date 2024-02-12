@@ -1,7 +1,7 @@
-FROM centos/ruby-23-centos7
+FROM centos/ruby-26-centos7
 
-RUN scl enable rh-ruby23 -- gem install listen -v 3.0.8
-RUN scl enable rh-ruby23 -- gem install ascii_binder
+RUN scl enable rh-ruby26 -- gem install listen -v 3.0.8
+RUN scl enable rh-ruby26 -- gem install ascii_binder
 USER root
 RUN yum install -y java-1.7.0-openjdk && \
     yum clean all
